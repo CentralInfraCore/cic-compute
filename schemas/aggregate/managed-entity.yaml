@@ -1,0 +1,107 @@
+---
+metadata:
+  name: ManagedEntity
+  version: v0.0.dev
+  description: >
+    A CIC alap kompozíciós egysége — minden domain objektum ebből specializálódik.
+    Nem önálló objektum: ez a szemantikai contract amelyre switch interface, kubernetes pod,
+    database, service és bármi más ráül. Az objektum mindig következmény, soha nem kiindulópont.
+  owner: Gabor Zoltan Sinko
+  tags:
+    - primitive
+    - aggregate
+    - core
+  validatedBy:
+    name: cic-primitives
+    version: v0.0.dev
+
+spec:
+  kind: AggregatePrimitive
+
+  slots:
+    identity:
+      mode: required
+      type: TBD
+      description: >
+        Típusazonosság — nem példány azonosítás. Meghatározza mi ez az entitás a CIC-ben.
+        Komponensek: kind, namespace, version, base (örökíthető Identity chain).
+        Phase 4-ben Identity atomic ref váltja fel a TBD-t.
+
+    config_surface:
+      mode: required
+      type: ConfigSurface
+      description: >
+        Az írható, kívánt állapot felülete. Kötelező — minden ManagedEntity-nek
+        van konfigurálható állapota.
+
+    state_surface:
+      mode: required
+      type: StateSurface
+      description: >
+        A csak olvasható, aktuális állapot felülete. Kötelező — minden ManagedEntity-nek
+        van lekérdezhető aktuális állapota.
+
+    operation_surface:
+      mode: defaulted
+      type: OperationSurface
+      default: empty
+      description: >
+        A végrehajtható műveletek felülete. Lehet üres — nem minden entitásnak vannak
+        explicit műveletei (pl. egy egyszerű config node-nak nincs restart-ja).
+
+    notification_surface:
+      mode: defaulted
+      type: TBD
+      default: empty
+      description: >
+        Az aszinkron jelzések felülete. Lehet üres.
+        Phase 4-ben NotificationSurface aggregate ref váltja fel a TBD-t.
+
+    capability_surface:
+      mode: defaulted
+      type: TBD
+      default: inherit
+      description: >
+        Mit tud ez az entitás — feature flags, supported operations, protocol versions.
+        Phase 4-ben CapabilitySurface aggregate ref váltja fel a TBD-t.
+
+    lifecycle_surface:
+      mode: sealed
+      type: TBD
+      description: >
+        Lifecycle állapotgép — minden ManagedEntity-nek van életciklusa.
+        Nem elhagyható, nem módosítható: create → active → [degraded] → terminating → terminated.
+        Phase 4-ben LifecycleSurface aggregate ref váltja fel a TBD-t.
+
+    binding_surface:
+      mode: required
+      type: TBD
+      description: >
+        Legalább egy binding kötelező — hogyan érhető el ez az entitás.
+        Address atomok + adapter referencia. Ez köti össze a primitive modellt a runtime-mal.
+        Phase 4-ben BindingSurface aggregate ref váltja fel a TBD-t.
+
+  semantic_mapping:
+    yang:
+      construct: container
+      note: >
+        A ManagedEntity egy YANG container-ré fordul. Benne:
+        config_surface → container config { ... }
+        state_surface  → container state { config false; ... }
+        operation_surface → rpc/action definíciók
+        notification_surface → notification definíciók
+    api:
+      base_path: "/{resource-type}/{resource-id}"
+      endpoints:
+        - path: "/config"
+          methods: [GET, PUT, PATCH]
+        - path: "/state"
+          methods: [GET]
+        - path: "/operations/{name}"
+          methods: [POST]
+      note: RESTCONF resource — collection + instance pattern
+    runtime:
+      role: reconcile-loop-entry
+      note: >
+        A reconciler minden ManagedEntity-re: observe state_surface →
+        compare config_surface → ha drift → execute operation vagy direkt apply.

@@ -1,0 +1,65 @@
+---
+metadata:
+  name: OperationSurface
+  version: v0.0.dev
+  description: >
+    A végrehajtható műveletek felülete egy ManagedEntity-n.
+    Ide tartoznak az rpc-k, action-ök és lifecycle operation-ök.
+  owner: Gabor Zoltan Sinko
+  tags:
+    - primitive
+    - aggregate
+    - operation
+  validatedBy:
+    name: cic-primitives
+    version: v0.0.dev
+
+spec:
+  kind: AggregatePrimitive
+
+  slots:
+    operations:
+      mode: required
+      type: "TBD → Behavior[]"
+      description: >
+        A végrehajtható műveletek listája. Leszármazottban kötelezően specializálandó.
+        Phase 4-ben Behavior atomic ref-ek váltják fel a TBD-t.
+        Típusok: rpc (entitástól független) | action (entitáshoz kötött) | operation (lifecycle).
+
+    idempotency:
+      mode: defaulted
+      type: boolean
+      default: false
+      description: >
+        Az operations slot összes műveletének alapértelmezett idempotencia jelzője.
+        Felülírható műveleti szinten Behavior atomic-ban.
+
+    timeout:
+      mode: defaulted
+      type: duration
+      default: 30s
+      description: >
+        Az operations slot összes műveletének alapértelmezett timeout-ja.
+        Felülírható műveleti szinten Behavior atomic-ban.
+
+    audit:
+      mode: sealed
+      type: boolean
+      value: true
+      description: >
+        Minden művelet végrehajtása loggolásra kerül. Nem kapcsolható ki.
+        A CIC management loop egyik alapkövetelménye — auditálhatóság.
+
+  semantic_mapping:
+    yang:
+      constructs: [rpc, action]
+      note: >
+        rpc = top-level, entitástól független (pl. validate-config).
+        action = entitáshoz kötött, a config/state container testvére (pl. restart).
+    api:
+      methods: [POST]
+      path: "/{resource}/operations/{operation-name}"
+      note: minden művelet POST — nincs idempotens HTTP verb mapping műveletekhez
+    runtime:
+      role: operation-dispatcher
+      note: a runtime hívja meg az adapter megfelelő handler-ét

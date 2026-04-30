@@ -1,0 +1,63 @@
+---
+metadata:
+  name: ConfigSurface
+  version: v0.0.dev
+  description: >
+    Az írható, kívánt állapot felülete egy ManagedEntity-n.
+    Minden config változás ezen a felületen keresztül érkezik — ez a desired state konténere.
+  owner: Gabor Zoltan Sinko
+  tags:
+    - primitive
+    - aggregate
+    - config
+  validatedBy:
+    name: cic-primitives
+    version: v0.0.dev
+
+spec:
+  kind: AggregatePrimitive
+
+  slots:
+    root:
+      mode: sealed
+      type: TBD
+      description: >
+        A config fa gyökere. Nem módosítható leszármazottban — minden config node
+        ebből indul ki. A struktúra egységes a teljes CIC-ben.
+
+    nodes:
+      mode: required
+      type: "TBD → Shape[]"
+      description: >
+        A konkrét config mezők listája. Leszármazottban kötelezően specializálandó.
+        Phase 4-ben Shape atomic ref-ek váltják fel a TBD-t.
+
+    validation:
+      mode: defaulted
+      type: "TBD → Contract[]"
+      default: []
+      description: >
+        Kényszerfeltételek listája amelyek a config alkalmazása előtt ellenőrizendők.
+        Phase 4-ben Contract atomic ref-ek váltják fel a TBD-t.
+
+    access:
+      mode: defaulted
+      type: TBD
+      default: inherit
+      description: >
+        Írási policy referencia — ki módosíthatja ezt a config surface-t.
+        Alapértelmezés szerint az entitás szülőjétől örökli.
+
+  semantic_mapping:
+    yang:
+      construct: container
+      name: config
+      flag: "config true"
+      note: minden leaf/container child config true-ként jelenik meg
+    api:
+      methods: [PUT, PATCH]
+      path: "/{resource}/config"
+      note: teljes csere PUT, részleges módosítás PATCH
+    runtime:
+      role: desired-state-store
+      note: ez az az állapot amelyre a reconciler törekszik

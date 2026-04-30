@@ -1,0 +1,64 @@
+---
+metadata:
+  name: StateSurface
+  version: v0.0.dev
+  description: >
+    A csak olvasható, aktuális állapot felülete egy ManagedEntity-n.
+    Az adapter tölti fel — ez mutatja meg mi van ténylegesen a rendszerben.
+  owner: Gabor Zoltan Sinko
+  tags:
+    - primitive
+    - aggregate
+    - state
+  validatedBy:
+    name: cic-primitives
+    version: v0.0.dev
+
+spec:
+  kind: AggregatePrimitive
+
+  slots:
+    root:
+      mode: sealed
+      type: TBD
+      description: >
+        A state fa gyökere. Nem módosítható — struktúra egységes a teljes CIC-ben.
+
+    nodes:
+      mode: required
+      type: "TBD → Shape[] + Role(state|operational|derived|volatile)"
+      description: >
+        Az observable mezők listája. Leszármazottban kötelezően specializálandó.
+        Minden node-hoz Role atom jelzi hogy config, state, derived vagy volatile.
+        Phase 4-ben Shape + Role atomic ref-ek váltják fel a TBD-t.
+
+    freshness:
+      mode: defaulted
+      type: TBD
+      default:
+        ttl: 60s
+        strategy: polling
+      description: >
+        Mennyi ideig érvényes az observed state és hogyan frissül.
+        Stratégiák: polling | streaming | event-driven | push.
+
+    source:
+      mode: required
+      type: TBD
+      description: >
+        Ki tölti fel ezt a state surface-t. Adapter referencia — kötelező megadni.
+        Például: kubernetes-adapter, snmp-adapter, mock-adapter.
+
+  semantic_mapping:
+    yang:
+      construct: container
+      name: state
+      flag: "config false"
+      note: minden child node config false — nem írható NETCONF/RESTCONF-on keresztül
+    api:
+      methods: [GET]
+      path: "/{resource}/state"
+      note: csak olvasható — PUT/PATCH/DELETE nem engedélyezett
+    runtime:
+      role: observed-state-store
+      note: az adapter írja, a reconciler olvassa a drift számításhoz
