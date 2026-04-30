@@ -127,3 +127,40 @@ a dependency.yaml megmutatja _szándékosan mit_ kellett behozni és miért.
 
 **Következmény:** A `git-bootstrap` task után azonnal jön a `dependency-yaml` task
 (PROMPTMAP Phase 1, priority 2).
+
+---
+
+## D-008 — Semantic validate = compiler responsibility, nem primitive modell (2026-04-30)
+
+**Döntés:** A primitive YAML contract marad tisztán deklaratív (sealed/defaulted/required).
+A séma-kompatibilitás ellenőrzése — hogy egy domain specializáció kompatibilis-e az upstream
+primitive-vel — a `compiler.py validate` feladata, nem beépített override-szabály.
+
+**Nyitott rész (merge stratégia):** Ha egy leszármazott `defaulted` slotot felülír, mi a
+merge policy? `replace | deep_merge | append | union` — ez még nincs döntve.
+Lezárási feltétel: az első domain repó ténylegesen override-ol egy slotot.
+
+**Miért:** A primitive modell leírja _mit_ jelent egy kezelt objektum. A compiler mondja ki,
+hogy egy specializáció _kompatibilis-e_. Ez clean separation of concerns — a primitive nem
+tartalmaz futtatási logikát.
+
+**Következmény:** A következő konkrét tooling lépés:
+1. `schemas/index.yaml` → primitive meta-schema (mi egy érvényes atomic/aggregate YAML)
+2. `compiler.py` → primitive YAML fájlokat is validálja (nem csak `*.meta.yaml`)
+3. Semantic compatibility check domain repo specializációra → Phase 6 tooling
+
+---
+
+## D-009 — ExecutionSurface szándékosan hiányzik (2026-04-30)
+
+**Döntés:** Az `ExecutionSurface` aggregate (triggers, dependencies, reconciliation,
+failure_policy, ownership, graph_edges) **nem kerül be most**.
+
+**Miért:** Ha a Relay valós graph execution modellje nélkül definiáljuk, spekulatív lesz
+és valószínűleg újra kell írni. A helyes sorrend:
+1. CIC-Relay valós futtatási modell (mi vált ki, mi a desired→actual átmenet, mi történik hibánál)
+2. Abból visszavezetni az ExecutionSurface slot-jait
+3. Nem fordítva
+
+**Következmény:** Az ExecutionSurface nyitott bridge marad amíg a Relay modell nincs.
+Ha valaki ExecutionSurface-t igényel, először a Relay execution modelljét kell definiálni.

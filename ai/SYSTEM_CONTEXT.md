@@ -160,6 +160,9 @@ A repo bootstrap **kész**, Phase 1–5 végrehajtva.
 | aggregate completion (atomic ref-ek) | **defined** |
 | domain példa (`schemas/examples/kubernetes-pod.yaml`) | **defined** |
 | `make validate` zöld | **defined** |
+| primitive YAML validáció (`schemas/index.yaml` + compiler.py) | **concept** — D-008, Phase 6 |
+| domain specializáció semantic check | **concept** — D-008, Phase 6 |
+| ExecutionSurface aggregate | **concept** — D-009, Relay modell után |
 | első signed release | **concept** — Vault + `make release VERSION=x` |
 
 ---

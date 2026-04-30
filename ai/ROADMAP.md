@@ -53,12 +53,23 @@ Slot contract-ok sealed/defaulted/required módokkal. Atomic type referencia mé
 | 5.1 | Kubernetes Pod kompozíció | ✓ done |
 | 5.2 | VAGY Managed Switch Interface | concept |
 
-## Phase 6 — Signed release
+## Phase 6 — Primitive YAML validáció (compiler bekötés)
+
+D-008: compiler.py responsibility, nem primitive modell.
+Töréspont: az első domain repo specializációja.
+
+| # | Feladat | Státusz | Blokkoló |
+|---|---|---|---|
+| 6.1 | `schemas/index.yaml` → primitive meta-schema | concept | — |
+| 6.2 | `compiler.py` primitive YAML validáció | concept | 6.1 |
+| 6.3 | domain specializáció semantic compatibility check | concept | 6.2 |
+
+## Phase 7 — Signed release
 
 | # | Feladat | Státusz |
 |---|---|---|
-| 6.1 | make release VERSION=0.1.0 | concept — Vault setup szükséges |
-| 6.2 | Artifact más repó dependencies/-be | concept |
+| 7.1 | make release VERSION=0.1.0 | concept — Vault setup szükséges |
+| 7.2 | Artifact más repó dependencies/-be | concept |
 
 ---
 

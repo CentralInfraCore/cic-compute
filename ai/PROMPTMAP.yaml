@@ -361,3 +361,67 @@ entries:
       Mutasd meg a teljes levezetési láncot:
         primitive YAML → (tervezett) YANG modul → RESTCONF path → runtime contract
     accept: séma validálható + a lánc dokumentált
+
+  # ── Phase 6: Primitive YAML validáció bekötése ──────────────────────────────
+  # D-008: compiler.py felelőssége, nem primitive modell
+  # Sorrend: index.yaml mint primitive meta-schema → compiler bekötés → domain próba
+
+  - task: "primitive-meta-schema"
+    status: pending
+    priority: 21
+    milestone: compiler-validation
+    prompt: |
+      Definiáld a `schemas/index.yaml`-t mint primitive meta-sémát.
+      Ez a JSON Schema ami leírja, mi egy érvényes atomic / aggregate YAML fájl.
+      Minimum struktúra:
+        - metadata blokk: name, version, description, owner, tags, validatedBy
+        - spec blokk: kind (AtomicPrimitive | AggregatePrimitive | DomainComposition)
+        - atomic esetén: spec.fields, spec.type_system
+        - aggregate esetén: spec.slots (minden slotnak mode: sealed|defaulted|required)
+      Ez váltja le a jelenlegi placeholder index.yaml-t.
+    accept: make validate
+
+  - task: "compiler-primitive-validation"
+    status: pending
+    priority: 22
+    milestone: compiler-validation
+    blocked_by: "primitive-meta-schema"
+    prompt: |
+      Kösd be a `tools/compiler.py`-ba a primitive YAML validációt.
+      Jelenleg csak `*.meta.yaml` fájlokat validál `md.meta.schema.yaml` ellen.
+      Szükséges változás: `schemas/**/*.yaml` fájlokat is validálja `schemas/index.yaml` ellen.
+      Lezárási kritérium:
+        - `make validate` validálja az összes atomic + aggregate YAML-t
+        - Hibás primitive YAML → validate megbukik, nem csak figyelmeztet
+    accept: make validate (atomic + aggregate YAML-ok validálva)
+
+  - task: "domain-specialization-compatibility-check"
+    status: pending
+    priority: 23
+    milestone: compiler-validation
+    blocked_by: "compiler-primitive-validation"
+    prompt: |
+      Írj semantic compatibility check-et a compiler.py-ba domain specializációkra.
+      Egy DomainComposition (pl. kubernetes-pod.yaml) kompatibilis-e az upstream
+      ManagedEntity aggregate-tel?
+      Ellenőrizendő:
+        - sealed slot nincs felülírva
+        - required slot ki van töltve
+        - defaulted slot felülírása nem sérti a típust
+        - merge stratégia (replace | deep_merge | append | union) — D-008 nyitott rész
+      Ez az a pont ahol az első domain repo specializációja törhet — ezt kell lefedni.
+    accept: make validate (kubernetes-pod.yaml kompatibilitása ellenőrzött)
+
+  # ── Phase 7: Első signed release ────────────────────────────────────────────
+
+  - task: "signed-release"
+    status: pending
+    priority: 24
+    milestone: release
+    blocked_by: "compiler-primitive-validation"
+    prompt: |
+      Hozd létre az első signed release artifact-ot.
+        make release VERSION=0.1.0
+      Előfeltétel: Vault Transit kulcs (`cic-my-sign-key`) elérhető.
+      Artifact: release/ könyvtárba, checksum + ECDSA aláírás.
+    accept: ls release/ && make validate
