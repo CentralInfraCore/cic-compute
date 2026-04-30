@@ -79,16 +79,19 @@ explicit slot listát kategóriával.
 
 ---
 
-## D-006 — repo_type döntés (LEZÁRVA: primitive)
+## D-006 — repo_type döntés (LEZÁRVA: primitive — jövőbeli kiterjesztés)
 
-**Döntés:** `repo_type: primitive`
+**Döntés:** Szemantikailag `repo_type: primitive`, de ez a mező jelenleg **nem létezik**
+a `project.schema.yaml`-ban és a `compiler.py`-ban.
 
-**Miért:** A cic-primitives nem egyszerű schema repo — schema-képző primitive repo.
-Ha `schema` marad, a tooling később szemantikailag torzítja a repo szerepét.
-A `primitive` típus pontosan leírja, hogy ez a meta-szint, amelyből sémák deriválhatók.
+**Jelenlegi állapot:** A `project.yaml`-ban nincs `repo_type` mező — a séma és a compiler
+nem ismeri. A szándék dokumentálva van, a megvalósítás a base-repo kiterjesztésére vár.
 
-**Következmény:** A `compiler.py`-t a base-repo-ban ki kell terjeszteni a `primitive`
-repo_type kezelésére. A `project.yaml` task erre épít.
+**Miért nem schema:** A cic-primitives nem egyszerű schema repo — schema-képző primitive
+repo. Ha `schema` típus kerülne be, szemantikailag torzítaná a toolingot.
+
+**Következmény:** A `compiler.py` és `project.schema.yaml` kiterjesztése a base-repo-ban
+szükséges. Addig a `project.yaml`-ból a `repo_type` mező hiányzik.
 
 ---
 
