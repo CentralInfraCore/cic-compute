@@ -1,0 +1,346 @@
+---
+metadata:
+  name: KubernetesPod
+  version: v0.0.dev
+  description: >
+    Kubernetes Pod mint ManagedEntity specializáció.
+    Ez NEM új primitive — a ManagedEntity aggregate konkrét domain-ra való alkalmazása.
+    Reality check: ha ebből levezethető YANG modul, RESTCONF path és runtime contract,
+    a primitive modell működik.
+  owner: Gabor Zoltan Sinko
+  tags:
+    - example
+    - domain-composition
+    - kubernetes
+  validatedBy:
+    name: cic-primitives
+    version: v0.0.dev
+
+spec:
+  kind: DomainComposition
+  base:
+    aggregate: ManagedEntity
+    ref: schemas/aggregate/managed-entity.yaml
+
+  # ── Identity ────────────────────────────────────────────────────────────────
+  identity:
+    atomic_ref: schemas/atomic/identity.yaml
+    kind: KubernetesPod
+    namespace: "cic:kubernetes"
+    version: v0.1.dev
+    base: "cic:core:ManagedEntity"
+    abstract: false
+    description: Kubernetes Pod — az alapvető futtatási egység K8s-ben
+
+  # ── ConfigSurface ────────────────────────────────────────────────────────────
+  config_surface:
+    aggregate_ref: schemas/aggregate/config-surface.yaml
+    nodes:
+      - name: image
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: string
+        role: config
+        mandatory: true
+        description: Container image URI (pl. nginx:1.21, registry/app:v2.3)
+        contract:
+          - type: pattern
+            expression: "^[a-z0-9][a-z0-9./_:-]*$"
+            error_message: Érvényes container image URI szükséges
+
+      - name: replicas
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: integer
+        role: config
+        optional: true
+        default: 1
+        description: Kívánt Pod példányok száma
+        contract:
+          - type: range
+            expression: "1..1000"
+            error_message: replicas értéke 1 és 1000 között kell legyen
+
+      - name: resources
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: composite
+        role: config
+        optional: true
+        description: CPU és memória igény
+        fields:
+          - name: requests
+            shape_type: composite
+            fields:
+              - name: cpu
+                shape_type: scalar
+                scalar_type: string
+                description: "CPU request (pl. 100m, 0.5)"
+              - name: memory
+                shape_type: scalar
+                scalar_type: string
+                description: "Memory request (pl. 128Mi, 1Gi)"
+          - name: limits
+            shape_type: composite
+            fields:
+              - name: cpu
+                shape_type: scalar
+                scalar_type: string
+                description: "CPU limit"
+              - name: memory
+                shape_type: scalar
+                scalar_type: string
+                description: "Memory limit"
+
+      - name: env
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: collection
+        collection_variant: list
+        role: config
+        optional: true
+        description: Környezeti változók listája
+        item_fields:
+          - name: name
+            shape_type: scalar
+            scalar_type: string
+            role: key
+          - name: value
+            shape_type: scalar
+            scalar_type: string
+
+  # ── StateSurface ─────────────────────────────────────────────────────────────
+  state_surface:
+    aggregate_ref: schemas/aggregate/state-surface.yaml
+    source: kubernetes-adapter
+    freshness:
+      ttl: 30s
+      strategy: event-driven
+    nodes:
+      - name: phase
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: string
+        role_ref: schemas/atomic/role.yaml
+        role: state
+        description: Pod lifecycle fázis
+        contract:
+          - type: enum
+            expression: [Pending, Running, Succeeded, Failed, Unknown]
+
+      - name: pod_ip
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: string
+        role_ref: schemas/atomic/role.yaml
+        role: operational
+        optional: true
+        description: Pod IP cím — futásidőben kiosztott
+
+      - name: conditions
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: collection
+        collection_variant: list
+        role_ref: schemas/atomic/role.yaml
+        role: state
+        description: Pod condition-ök listája (Ready, PodScheduled, stb.)
+        item_fields:
+          - name: type
+            shape_type: scalar
+            scalar_type: string
+            role: key
+          - name: status
+            shape_type: scalar
+            scalar_type: string
+            contract:
+              - type: enum
+                expression: ["True", "False", Unknown]
+          - name: message
+            shape_type: scalar
+            scalar_type: string
+            optional: true
+
+      - name: container_statuses
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: collection
+        collection_variant: list
+        role_ref: schemas/atomic/role.yaml
+        role: operational
+        description: Konténerenként futásidejű állapot
+        item_fields:
+          - name: name
+            shape_type: scalar
+            scalar_type: string
+            role: key
+          - name: ready
+            shape_type: scalar
+            scalar_type: boolean
+          - name: restart_count
+            shape_type: scalar
+            scalar_type: integer
+            role: operational
+
+  # ── OperationSurface ─────────────────────────────────────────────────────────
+  operation_surface:
+    aggregate_ref: schemas/aggregate/operation-surface.yaml
+    operations:
+      - name: restart
+        atomic_ref: schemas/atomic/behavior.yaml
+        type: action
+        idempotent: false
+        description: Pod újraindítása — az összes konténer leáll és újraindul
+        input: null
+        output:
+          - name: status
+            shape_type: scalar
+            scalar_type: string
+
+      - name: drain
+        atomic_ref: schemas/atomic/behavior.yaml
+        type: action
+        idempotent: true
+        description: Pod graceful leállítása — új kéréseket nem fogad, meglévőket befejezi
+        input:
+          - name: grace_period_seconds
+            shape_type: scalar
+            scalar_type: integer
+            default: 30
+        output:
+          - name: drained_at
+            shape_type: scalar
+            scalar_type: string
+
+      - name: scale
+        atomic_ref: schemas/atomic/behavior.yaml
+        type: operation
+        idempotent: true
+        description: Replika szám módosítása — async, job-t ad vissza
+        input:
+          - name: replicas
+            shape_type: scalar
+            scalar_type: integer
+            mandatory: true
+        output:
+          - name: job_id
+            shape_type: scalar
+            scalar_type: string
+
+  # ── NotificationSurface ──────────────────────────────────────────────────────
+  notification_surface:
+    events:
+      - name: phase-changed
+        atomic_ref: schemas/atomic/event.yaml
+        trigger: state_change
+        severity: warning
+        description: Pod fázis megváltozott (pl. Running → Failed)
+        payload:
+          - name: previous_phase
+            shape_type: scalar
+            scalar_type: string
+          - name: current_phase
+            shape_type: scalar
+            scalar_type: string
+
+      - name: container-restarted
+        atomic_ref: schemas/atomic/event.yaml
+        trigger: threshold
+        severity: warning
+        description: Konténer újraindult (CrashLoopBackOff detektálás)
+        payload:
+          - name: container_name
+            shape_type: scalar
+            scalar_type: string
+          - name: restart_count
+            shape_type: scalar
+            scalar_type: integer
+
+  # ── LifecycleSurface ─────────────────────────────────────────────────────────
+  lifecycle_surface:
+    states: [pending, running, terminating, terminated]
+    initial: pending
+    transitions:
+      pending: [running, terminated]
+      running: [terminating]
+      terminating: [terminated]
+    terminal: [terminated]
+
+  # ── BindingSurface ───────────────────────────────────────────────────────────
+  binding_surface:
+    addresses:
+      - atomic_ref: schemas/atomic/address.yaml
+        schema_path: "/cic-kubernetes:pods/pod={namespace},{name}"
+        api_path: "/restconf/data/cic-kubernetes:pods/pod={namespace},{name}"
+        logical_id: "cic:kubernetes:{namespace}:{name}"
+        namespace: "cic:kubernetes"
+    adapter: kubernetes-adapter
+
+# ── Levezetési lánc (reality check) ───────────────────────────────────────────
+derivation_chain:
+
+  yang:
+    module: cic-kubernetes-pod
+    namespace: "urn:cic:kubernetes:pod"
+    description: Generált YANG modul vázlat
+    content: |
+      module cic-kubernetes-pod {
+        namespace "urn:cic:kubernetes:pod";
+        prefix cic-pod;
+
+        list pod {
+          key "namespace name";
+          leaf namespace { type string; }
+          leaf name      { type string; }
+
+          container config {
+            leaf image    { type string; mandatory true; }
+            leaf replicas { type uint16; default 1; }
+            container resources { ... }
+            list env { key name; leaf name { type string; } leaf value { type string; } }
+          }
+
+          container state {
+            config false;
+            leaf phase  { type enumeration { enum Pending; enum Running; enum Succeeded; enum Failed; enum Unknown; } }
+            leaf pod-ip { type string; }
+            list conditions { key type; leaf type { type string; } leaf status { type string; } }
+            list container-statuses { key name; leaf name { type string; } leaf ready { type boolean; } }
+          }
+
+          action restart { output { leaf status { type string; } } }
+          action drain   { input { leaf grace-period-seconds { type uint16; default 30; } } }
+          action scale   { input { leaf replicas { type uint16; mandatory true; } } }
+
+          notification phase-changed {
+            leaf previous-phase { type string; }
+            leaf current-phase  { type string; }
+          }
+        }
+      }
+
+  restconf:
+    collection: "GET /restconf/data/cic-kubernetes:pods"
+    instance:   "GET /restconf/data/cic-kubernetes:pods/pod={namespace},{name}"
+    config:
+      read:   "GET    /restconf/data/cic-kubernetes:pods/pod={namespace},{name}/config"
+      update: "PUT    /restconf/data/cic-kubernetes:pods/pod={namespace},{name}/config"
+      patch:  "PATCH  /restconf/data/cic-kubernetes:pods/pod={namespace},{name}/config"
+    state:
+      read:   "GET    /restconf/data/cic-kubernetes:pods/pod={namespace},{name}/state"
+    operations:
+      restart: "POST /restconf/operations/cic-kubernetes:pods/pod={namespace},{name}/restart"
+      drain:   "POST /restconf/operations/cic-kubernetes:pods/pod={namespace},{name}/drain"
+      scale:   "POST /restconf/operations/cic-kubernetes:pods/pod={namespace},{name}/scale"
+    events:
+      stream: "GET /restconf/streams/cic-kubernetes-pod-events"
+
+  runtime:
+    reconcile_loop: |
+      1. observe:   kubernetes-adapter.get_pod(namespace, name) → state_surface
+      2. compare:   diff(config_surface, state_surface) → drift?
+      3. if drift:
+           image changed    → kubernetes-adapter.update_pod_image(...)
+           replicas changed → scale operation → kubernetes-adapter.scale(...)
+           env changed      → kubernetes-adapter.update_pod_env(...)
+      4. emit:      phase-changed event ha phase eltért
+    adapter_contract:
+      observe:  "GET k8s API /api/v1/namespaces/{ns}/pods/{name}"
+      apply:    "PATCH k8s API /api/v1/namespaces/{ns}/pods/{name}"
+      watch:    "GET k8s API /api/v1/namespaces/{ns}/pods?watch=true"
