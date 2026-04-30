@@ -45,7 +45,7 @@ entries:
               - mk/
               - tools/
       Szabály: csak pinnelt tag (nem branch, nem HEAD) kerülhet ide.
-    accept: grep "tag: v0.0.0" dependency.yaml
+    accept: grep "tag: base@0.5.0" dependency.yaml
 
   - task: "project-yaml"
     status: pending
@@ -59,7 +59,8 @@ entries:
         metadata.license: CC-BY-NC-SA-4.0
         metadata.main_branch: main
         metadata.owner: Gabor Zoltan Sinko
-        compiler_settings.repo_type: primitive  # D-006 lezárva: primitive, nem schema
+        compiler_settings.repo_type: # elhagyva — compiler még nem támogatja (D-006)
+        x-cic.repo_type: primitive             # szándék dokumentálva, tooling pending
         compiler_settings.component_name: cic-primitives
         compiler_settings.meta_schemas_dir: ./
         compiler_settings.source_dir: schemas

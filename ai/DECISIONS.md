@@ -19,7 +19,7 @@ A pinnelt tag + dependency.yaml együtt ad determinisztikus, reprodukálható co
 
 **Következmény:** Minden leszármazott repo-nak ugyanazt a fájl-topológiát kell követnie
 mint az upstream. A `base-repo` remote a tooling + struktúra single source of truth.
-Merge parancs: `git merge base/v0.0.0`, nem `git merge base/main`.
+Merge parancs: `git merge base@0.5.0`, nem `git merge base/main`.
 
 ---
 

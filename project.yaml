@@ -19,3 +19,8 @@ compiler_settings:
   source_dir: schemas
   meta_schema_file: md.meta.schema.yaml
   vault_key_name: cic-my-sign-key
+
+x-cic:
+  repo_type: primitive
+  # repo_type: primitive — szándék dokumentálva.
+  # A compiler_settings-be akkor kerül, ha a base-repo compiler.py támogatja.
