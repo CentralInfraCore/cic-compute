@@ -4,11 +4,11 @@
 
 | # | Feladat | Státusz | Blokkoló |
 |---|---|---|---|
-| 1.1 | git init + `git merge base@0.5.0` | pending | — |
-| 1.2 | dependency.yaml (D-007) | pending | 1.1 |
-| 1.3 | project.yaml (`repo_type: primitive`) | pending | 1.1 |
-| 1.4 | schemas/ könyvtárstruktúra | pending | 1.1 |
-| 1.5 | make validate zöld | pending | 1.1–1.4 |
+| 1.1 | git init + `git merge base@0.5.0` | ✓ done | — |
+| 1.2 | dependency.yaml (D-007) | ✓ done | 1.1 |
+| 1.3 | project.yaml (`repo_type: primitive`) | ✓ done | 1.1 |
+| 1.4 | schemas/ könyvtárstruktúra | ✓ done | 1.1 |
+| 1.5 | make validate zöld | ✓ done | 1.1–1.4 |
 
 ## Phase 2 — Aggregate skeletons (D-002: aggregate-first)
 
@@ -16,49 +16,49 @@ Slot contract-ok sealed/defaulted/required módokkal. Atomic type referencia mé
 
 | # | Feladat | Státusz |
 |---|---|---|
-| 2.1 | ConfigSurface skeleton | pending |
-| 2.2 | StateSurface skeleton | pending |
-| 2.3 | OperationSurface skeleton | pending |
-| 2.4 | **ManagedEntity skeleton** | pending |
+| 2.1 | ConfigSurface skeleton | ✓ done |
+| 2.2 | StateSurface skeleton | ✓ done |
+| 2.3 | OperationSurface skeleton | ✓ done |
+| 2.4 | **ManagedEntity skeleton** | ✓ done |
 
 ## Phase 3 — Atomic layer
 
 | # | Feladat | Státusz |
 |---|---|---|
-| 3.1 | Shape | pending |
-| 3.2 | Role | pending |
-| 3.3 | Behavior | pending |
-| 3.4 | Contract | pending |
-| 3.5 | Address | pending |
-| 3.6 | Identity | pending |
-| 3.7 | Event | pending |
+| 3.1 | Shape | ✓ done |
+| 3.2 | Role | ✓ done |
+| 3.3 | Behavior | ✓ done |
+| 3.4 | Contract | ✓ done |
+| 3.5 | Address | ✓ done |
+| 3.6 | Identity | ✓ done |
+| 3.7 | Event | ✓ done |
 
 ## Phase 4 — Aggregate completion (atomic ref-ek bekötése)
 
 | # | Feladat | Státusz | Blokkoló |
 |---|---|---|---|
-| 4.1 | ConfigSurface complete | pending | 2.1 + 3.1 + 3.4 |
-| 4.2 | StateSurface complete | pending | 2.2 + 3.1 + 3.2 |
-| 4.3 | OperationSurface complete | pending | 2.3 + 3.3 |
-| 4.4 | NotificationSurface | pending | 3.7 |
-| 4.5 | CapabilitySurface | pending | — |
-| 4.6 | LifecycleSurface | pending | — |
-| 4.7 | BindingSurface | pending | — |
-| 4.8 | **ManagedEntity complete** | pending | 4.1–4.7 |
+| 4.1 | ConfigSurface complete | ✓ done | 2.1 + 3.1 + 3.4 |
+| 4.2 | StateSurface complete | ✓ done | 2.2 + 3.1 + 3.2 |
+| 4.3 | OperationSurface complete | ✓ done | 2.3 + 3.3 |
+| 4.4 | NotificationSurface | concept | 3.7 |
+| 4.5 | CapabilitySurface | concept | — |
+| 4.6 | LifecycleSurface | concept | — |
+| 4.7 | BindingSurface | concept | — |
+| 4.8 | **ManagedEntity complete** | ✓ done | 4.1–4.7 |
 
 ## Phase 5 — Első domain példa (reality check)
 
 | # | Feladat | Státusz |
 |---|---|---|
-| 5.1 | Kubernetes Pod kompozíció | pending |
-| 5.2 | VAGY Managed Switch Interface | pending |
+| 5.1 | Kubernetes Pod kompozíció | ✓ done |
+| 5.2 | VAGY Managed Switch Interface | concept |
 
 ## Phase 6 — Signed release
 
 | # | Feladat | Státusz |
 |---|---|---|
-| 6.1 | make release VERSION=0.1.0 | pending |
-| 6.2 | Artifact más repó dependencies/-be | pending |
+| 6.1 | make release VERSION=0.1.0 | concept — Vault setup szükséges |
+| 6.2 | Artifact más repó dependencies/-be | concept |
 
 ---
 
@@ -66,13 +66,10 @@ Slot contract-ok sealed/defaulted/required módokkal. Atomic type referencia mé
 
 | ID | Kérdés | Státusz |
 |---|---|---|
-| D-006 | repo_type: primitive | **LEZÁRVA** |
+| D-006 | repo_type: primitive | **LEZÁRVA** — `x-cic.repo_type: primitive` |
 
-## Időbecslés (AI-val)
+## Megjegyzés
 
-- Phase 1: ~2 óra
-- Phase 2: fél nap (skeleton-ok gyorsak)
-- Phase 3: 1–2 nap
-- Phase 4: 1–2 nap
-- Phase 5: fél nap (reality check)
-- Phase 6: fél nap
+- Phase 1–5: **defined** (YAML fájlok léteznek, make validate zöld)
+- Phase 4.4–4.7 (NotificationSurface, CapabilitySurface, LifecycleSurface, BindingSurface): ManagedEntity-ben defaulted/sealed slot-ként dokumentálva, önálló aggregate séma még nincs
+- Phase 6: Vault + signing pipeline szükséges

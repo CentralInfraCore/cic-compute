@@ -8,7 +8,7 @@ entries:
   # ── Phase 1: Bootstrap ──────────────────────────────────────────────────────
 
   - task: "git-bootstrap"
-    status: pending
+    status: done
     priority: 1
     milestone: bootstrap
     prompt: |
@@ -24,7 +24,7 @@ entries:
     accept: ls tools/ && ls mk/ && ls Makefile
 
   - task: "dependency-yaml"
-    status: blocked
+    status: done
     priority: 2
     milestone: bootstrap
     blocked_by: "git-bootstrap"
@@ -45,10 +45,10 @@ entries:
               - mk/
               - tools/
       Szabály: csak pinnelt tag (nem branch, nem HEAD) kerülhet ide.
-    accept: grep "tag: base@0.5.0" dependency.yaml
+    accept: 'grep "tag: base@0.5.0" dependency.yaml'
 
   - task: "project-yaml"
-    status: pending
+    status: done
     priority: 3
     milestone: bootstrap
     prompt: |
@@ -71,7 +71,7 @@ entries:
     accept: make validate (dry run — séma nélkül is strukturálisan helyes)
 
   - task: "schema-directory-structure"
-    status: pending
+    status: done
     priority: 4
     milestone: bootstrap
     prompt: |
@@ -91,7 +91,7 @@ entries:
   # módokkal. Atomic type referenciák Phase 4-ben kerülnek be.
 
   - task: "aggregate-config-surface-skeleton"
-    status: pending
+    status: done
     priority: 5
     milestone: aggregate-skeleton
     prompt: |
@@ -109,7 +109,7 @@ entries:
     accept: grep -E "sealed|defaulted|required" schemas/aggregate/config-surface.yaml
 
   - task: "aggregate-state-surface-skeleton"
-    status: pending
+    status: done
     priority: 6
     milestone: aggregate-skeleton
     prompt: |
@@ -126,7 +126,7 @@ entries:
     accept: grep -E "sealed|defaulted|required" schemas/aggregate/state-surface.yaml
 
   - task: "aggregate-operation-surface-skeleton"
-    status: pending
+    status: done
     priority: 7
     milestone: aggregate-skeleton
     prompt: |
@@ -143,7 +143,7 @@ entries:
     accept: grep -E "sealed|defaulted|required" schemas/aggregate/operation-surface.yaml
 
   - task: "aggregate-managed-entity-skeleton"
-    status: pending
+    status: done
     priority: 8
     milestone: aggregate-skeleton
     prompt: |
@@ -167,7 +167,7 @@ entries:
   # ── Phase 3: Atomic layer ────────────────────────────────────────────────────
 
   - task: "atomic-shape"
-    status: pending
+    status: done
     priority: 9
     milestone: atomic
     prompt: |
@@ -182,7 +182,7 @@ entries:
     accept: make validate
 
   - task: "atomic-role"
-    status: pending
+    status: done
     priority: 10
     milestone: atomic
     prompt: |
@@ -196,7 +196,7 @@ entries:
     accept: make validate
 
   - task: "atomic-behavior"
-    status: pending
+    status: done
     priority: 11
     milestone: atomic
     prompt: |
@@ -210,7 +210,7 @@ entries:
     accept: make validate
 
   - task: "atomic-contract"
-    status: pending
+    status: done
     priority: 12
     milestone: atomic
     prompt: |
@@ -223,7 +223,7 @@ entries:
     accept: make validate
 
   - task: "atomic-address"
-    status: pending
+    status: done
     priority: 13
     milestone: atomic
     prompt: |
@@ -236,7 +236,7 @@ entries:
     accept: make validate
 
   - task: "atomic-identity"
-    status: pending
+    status: done
     priority: 14
     milestone: atomic
     prompt: |
@@ -252,7 +252,7 @@ entries:
     accept: make validate
 
   - task: "atomic-event"
-    status: pending
+    status: done
     priority: 15
     milestone: atomic
     prompt: |
@@ -268,7 +268,7 @@ entries:
   # ── Phase 4: Aggregate completion (atomic ref-ek bekötése) ───────────────────
 
   - task: "aggregate-config-surface-complete"
-    status: pending
+    status: done
     priority: 16
     milestone: aggregate-complete
     blocked_by: "aggregate-config-surface-skeleton, atomic-shape, atomic-contract"
@@ -287,7 +287,7 @@ entries:
     accept: make validate
 
   - task: "aggregate-state-surface-complete"
-    status: pending
+    status: done
     priority: 17
     milestone: aggregate-complete
     blocked_by: "aggregate-state-surface-skeleton, atomic-shape, atomic-role"
@@ -304,7 +304,7 @@ entries:
     accept: make validate
 
   - task: "aggregate-operation-surface-complete"
-    status: pending
+    status: done
     priority: 18
     milestone: aggregate-complete
     blocked_by: "aggregate-operation-surface-skeleton, atomic-behavior"
@@ -321,7 +321,7 @@ entries:
     accept: make validate
 
   - task: "aggregate-managed-entity-complete"
-    status: pending
+    status: done
     priority: 19
     milestone: aggregate-complete
     blocked_by: |
@@ -345,7 +345,7 @@ entries:
   # ── Phase 5: Első domain példa ───────────────────────────────────────────────
 
   - task: "example-kubernetes-pod"
-    status: pending
+    status: done
     priority: 20
     milestone: example
     blocked_by: "aggregate-managed-entity-complete"
