@@ -147,32 +147,31 @@ spec:
 
 ## Jelenlegi állapot (2026-04-30)
 
-A repo git bootstrap **előtt** van.
+A repo bootstrap **kész**, Phase 1–5 végrehajtva.
 
-- Nincs git init
-- Nincs base remote
-- Nincs project.yaml
-- Nincs egyetlen séma fájl sem
-
-Minden tartalom **concept** státuszban — tervezési döntések a `primitive.txt`
-ChatGPT threadben és az `ai/DECISIONS.md`-ben.
+| Elem | Státusz |
+|---|---|
+| git init + `git merge base@0.5.0` | **defined** |
+| `dependency.yaml` (D-007) | **defined** |
+| `project.yaml` | **defined** |
+| `schemas/` struktúra | **defined** |
+| aggregate skeletonök (4 db) | **defined** |
+| atomic layer (7 atom) | **defined** |
+| aggregate completion (atomic ref-ek) | **defined** |
+| domain példa (`schemas/examples/kubernetes-pod.yaml`) | **defined** |
+| `make validate` zöld | **defined** |
+| első signed release | **concept** — Vault + `make release VERSION=x` |
 
 ---
 
-## Fejlesztői bootstrap sorrend
+## Bootstrap sorrend (elvégzett lépések)
 
 ```bash
-# 1. Git init
 git init
 git remote add base git@github.com:CentralInfraCore/base-repo.git
 git fetch base
 git merge base@0.5.0 --allow-unrelated-histories
-
-# 2. project.yaml létrehozása (repo_type: schema vagy primitive)
-
-# 3. schemas/ struktúra
-
-# 4. make validate
-
-# 5. make release VERSION=0.1.0
+# → dependency.yaml, project.yaml, schemas/ létrehozva
+# → aggregate skeletonök → atomic layer → aggregate completion
+# → make validate zöld
 ```

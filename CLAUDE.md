@@ -38,19 +38,19 @@ Amíg ez a négy pont nincs meg, ne tegyél tényállításokat a primitive mode
 | **draft** | Design megvan írásban, séma még nincs |
 | **concept** | Megbeszélt, de formálisan még nincs rögzítve |
 
-Jelenleg **minden elem concept vagy draft** — a repo git bootstrap előtt van.
-
----
-
 ## Scaffold térkép (aktuális)
 
-| Elem | Státusz | Előfeltétel |
+| Elem | Státusz | Megjegyzés |
 |---|---|---|
-| git repo bootstrap | **concept** | `git init` + `git merge base@0.5.0` |
-| project.yaml | **concept** | repo_type döntés (schema vs. új típus) |
-| atomic primitives YAML | **concept** | git bootstrap + schemas/ struktúra |
-| aggregate primitives YAML | **concept** | atomic layer defined |
-| `make validate` | **concept** | schemas/index.yaml + tooling örökítve |
+| git repo bootstrap | **defined** | `git merge base@0.5.0` kész |
+| `dependency.yaml` | **defined** | `base@0.5.0` composition lock |
+| `project.yaml` | **defined** | `x-cic.repo_type: primitive` |
+| `schemas/` struktúra | **defined** | atomic/ + aggregate/ + index.yaml |
+| aggregate skeletonök | **defined** | ConfigSurface, StateSurface, OperationSurface, ManagedEntity |
+| atomic layer (7 atom) | **defined** | Shape, Role, Behavior, Contract, Address, Identity, Event |
+| aggregate completion | **defined** | atomic ref-ek bekötve |
+| domain példa | **defined** | `schemas/examples/kubernetes-pod.yaml` |
+| `make validate` zöld | **defined** | Docker-alapú tooling, Vault nélkül is fut |
 | első signed release | **concept** | Vault + `make release VERSION=x` |
 
 ---

@@ -84,14 +84,15 @@ explicit slot listát kategóriával.
 **Döntés:** Szemantikailag `repo_type: primitive`, de ez a mező jelenleg **nem létezik**
 a `project.schema.yaml`-ban és a `compiler.py`-ban.
 
-**Jelenlegi állapot:** A `project.yaml`-ban nincs `repo_type` mező — a séma és a compiler
-nem ismeri. A szándék dokumentálva van, a megvalósítás a base-repo kiterjesztésére vár.
+**Jelenlegi állapot:** A `repo_type` nem `compiler_settings` alatt van — a compiler még
+nem ismeri. A szándék `x-cic.repo_type: primitive`-ként dokumentálva a `project.yaml`-ban.
 
 **Miért nem schema:** A cic-primitives nem egyszerű schema repo — schema-képző primitive
 repo. Ha `schema` típus kerülne be, szemantikailag torzítaná a toolingot.
 
 **Következmény:** A `compiler.py` és `project.schema.yaml` kiterjesztése a base-repo-ban
-szükséges. Addig a `project.yaml`-ból a `repo_type` mező hiányzik.
+szükséges. Addig: `x-cic.repo_type: primitive` a szándék hordozója, `compiler_settings`-ben
+nem szerepel.
 
 ---
 
