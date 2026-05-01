@@ -415,7 +415,7 @@ entries:
   # ── Phase 7: Első signed release ────────────────────────────────────────────
 
   - task: "signed-release"
-    status: pending
+    status: done
     priority: 24
     milestone: release
     blocked_by: "compiler-primitive-validation"
@@ -425,3 +425,8 @@ entries:
       Előfeltétel: Vault Transit kulcs (`cic-my-sign-key`) elérhető.
       Artifact: release/ könyvtárba, checksum + ECDSA aláírás.
     accept: ls release/ && make validate
+    notes: |
+      Tag: primitives/@v0.1.0
+      Dockerfile-ba kellett: git, curl, jq + safe.directory /app
+      build_hash = source_hash egyelőre (tényleges build env nincs)
+      yq PATH issue: make release-ben tools/release.sh fallback-kel futott
