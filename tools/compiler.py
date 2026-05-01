@@ -320,6 +320,7 @@ def run_primitive_validation():
         f for f in schema_files
         if not os.path.basename(f) == 'index.yaml'
         and not f.endswith('.gitkeep')
+        and os.path.join('examples', 'invalid') not in f.replace(os.sep, '/')
         and os.path.getsize(f) > 0
     ]
 
@@ -360,6 +361,8 @@ def run_domain_compatibility_check():
     domain_files = []
     for f in all_files:
         if os.path.basename(f) == 'index.yaml' or f.endswith('.gitkeep'):
+            continue
+        if os.path.join('examples', 'invalid') in f.replace(os.sep, '/'):
             continue
         try:
             data = load_yaml(f)

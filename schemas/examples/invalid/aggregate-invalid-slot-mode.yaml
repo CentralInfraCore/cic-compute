@@ -1,0 +1,29 @@
+why_invalid: >
+  Az aggregate slot mode értéke 'optional' — ez nem érvényes érték.
+  D-005 szerint a három érvényes mode: sealed | defaulted | required.
+  Az index.yaml meta-schema enum kényszere elkapja.
+
+expected_error: >
+  jsonschema.ValidationError: 'optional' is not one of ['sealed', 'defaulted', 'required']
+
+---
+metadata:
+  name: BadAggregate
+  version: v0.1.dev
+  description: Érvénytelen slot mode demonstrálása
+  owner: Gabor Zoltan Sinko
+  tags:
+    - aggregate
+  validatedBy:
+    name: cic-primitives
+    version: v0.0.dev
+
+spec:
+  kind: AggregatePrimitive
+  slots:
+    identity:
+      mode: required
+      type: Identity
+    config_surface:
+      mode: optional        # ÉRVÉNYTELEN — csak sealed|defaulted|required megengedett
+      type: ConfigSurface

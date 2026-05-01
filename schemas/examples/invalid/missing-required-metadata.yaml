@@ -1,0 +1,22 @@
+why_invalid: >
+  A metadata blokkból hiányzik a kötelező 'owner' és 'validatedBy' mező.
+  Az index.yaml meta-schema szerint metadata.owner és metadata.validatedBy
+  kötelező (required). A compiler.py validate ezt elkapja.
+
+expected_error: >
+  jsonschema.ValidationError: 'owner' is a required property
+  jsonschema.ValidationError: 'validatedBy' is a required property
+
+---
+metadata:
+  name: BrokenAtom
+  version: v0.1.dev
+  description: Hiányzó kötelező metadata mezők demonstrálása
+  tags:
+    - atomic
+
+spec:
+  kind: AtomicPrimitive
+  fields:
+    - name: value
+      type: scalar

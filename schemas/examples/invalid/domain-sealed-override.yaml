@@ -1,0 +1,61 @@
+why_invalid: >
+  A DomainComposition felülírja a lifecycle_surface slotot, amely a ManagedEntity
+  aggregate-ben mode: sealed. D-005 szerint sealed slot nem módosítható leszármazottban.
+  A compiler.py run_domain_compatibility_check() elkapja Phase 6.3 óta.
+
+expected_error: >
+  compiler.py: sealed slot 'lifecycle_surface' must not be overridden
+
+---
+metadata:
+  name: BadDomainComposition
+  version: v0.0.dev
+  description: Sealed slot felülírásának demonstrálása
+  owner: Gabor Zoltan Sinko
+  tags:
+    - example
+    - domain-composition
+  validatedBy:
+    name: cic-primitives
+    version: v0.0.dev
+
+spec:
+  kind: DomainComposition
+  base:
+    aggregate: ManagedEntity
+    ref: schemas/aggregate/managed-entity.yaml
+
+  identity:
+    kind: BadEntity
+    namespace: "cic:example"
+    version: v0.1.dev
+    base: "cic:core:ManagedEntity"
+
+  config_surface:
+    nodes:
+      - name: param
+        shape_type: scalar
+        scalar_type: string
+        role: config
+        mandatory: true
+
+  state_surface:
+    source: example-adapter
+    nodes:
+      - name: status
+        shape_type: scalar
+        scalar_type: string
+        role: state
+
+  lifecycle_surface:            # ÉRVÉNYTELEN — lifecycle_surface sealed a ManagedEntity-ben
+    states: [on, off]
+    initial: off
+    transitions:
+      off: [on]
+      on: [off]
+
+  binding_surface:
+    addresses:
+      - schema_path: "/cic-example:entities/entity={id}"
+        api_path: "/restconf/data/cic-example:entities/entity={id}"
+        logical_id: "cic:example:{id}"
