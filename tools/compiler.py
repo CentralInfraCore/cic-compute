@@ -84,13 +84,13 @@ def get_reproducible_repo_hash(tree_id):
         text=True
     )
     archive_proc.stdout.close()  # Allow archive_proc to receive a SIGPIPE
-    
+
     repo_hash_b64 = b64_proc.communicate()[0].strip()
-    
+
     if b64_proc.returncode != 0:
-        print(f"[91m✗ ERROR: Failed to calculate reproducible repository hash.[0m")
+        print("\033[91m✗ ERROR: Failed to calculate reproducible repository hash.\033[0m")
         sys.exit(1)
-        
+
     return repo_hash_b64
 
 
@@ -106,7 +106,7 @@ def run_git_command(command):
         )
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
-        print(f"[91m✗ ERROR: Git command failed: {' '.join(command)}[0m")
+        print(f"\033[91m✗ ERROR: Git command failed: {' '.join(command)}\033[0m")
         print(e.stderr)
         sys.exit(1)
 
@@ -120,7 +120,7 @@ def validate_release_prerequisites():
     """
     print("--- Validating Release Prerequisites ---")
     project_config = load_project_config(full_config=True)['project']
-    
+
     # Sanitize the component name by removing any trailing '/main' or '|main'
     # to ensure it represents the core component prefix.
     raw_component_name = project_config.get('main_branch', 'main')
@@ -131,9 +131,9 @@ def validate_release_prerequisites():
     # 1. Check for clean git state
     git_status = run_git_command(['git', 'status', '--porcelain'])
     if git_status:
-        print("[91m✗ ERROR: Uncommitted changes detected. Please commit or stash them before releasing.[0m")
+        print("\033[91m✗ ERROR: Uncommitted changes detected. Please commit or stash them before releasing.\033[0m")
         sys.exit(1)
-    print("  [92m✓ Git working directory is clean.[0m")
+    print("  \033[92m✓ Git working directory is clean.\033[0m")
 
     # 2. Validate branch name and extract version
     current_branch = run_git_command(['git', 'rev-parse', '--abbrev-ref', 'HEAD'])
@@ -141,14 +141,14 @@ def validate_release_prerequisites():
     match = release_branch_pattern.match(current_branch)
 
     if not match:
-        print(f"[91m✗ ERROR: You are not on a valid release branch for the '{component_name}' component.[0m")
+        print(f"\033[91m✗ ERROR: You are not on a valid release branch for the '{component_name}' component.\033[0m")
         print(f"  Expected format: '{component_name}releases/vX.Y.Z'")
         print(f"  Current branch: '{current_branch}'")
         sys.exit(1)
 
     new_version_str = match.group(1)
     new_version = semver.Version.parse(new_version_str)
-    print(f"  [92m✓ Valid release branch found: {current_branch} (Version: {new_version_str})[0m")
+    print(f"  \033[92m✓ Valid release branch found: {current_branch} (Version: {new_version_str})\033[0m")
 
     # 3. Check for strict +1 version increment (no gaps)
     tag_pattern = f"{component_name}@v*.*.*"
@@ -157,9 +157,9 @@ def validate_release_prerequisites():
 
     if not existing_tags:
         if new_version.major != 0 or new_version.minor != 0 or new_version.patch != 0:
-             # Allowing 0.0.0 or 0.1.0 or 1.0.0 as first release
+            # Allowing 0.0.0 or 0.1.0 or 1.0.0 as first release
             pass
-        print("  [92m✓ No previous tags found. Proceeding with first release.[0m")
+        print("  \033[92m✓ No previous tags found. Proceeding with first release.\033[0m")
     else:
         existing_versions = sorted([semver.Version.parse(tag.split('@v')[-1]) for tag in existing_tags])
         latest_version = existing_versions[-1]
@@ -176,15 +176,14 @@ def validate_release_prerequisites():
             is_valid_next = True
 
         if not is_valid_next:
-            print(f"[91m✗ ERROR: Version '{new_version_str}' is not a valid next increment.[0m")
+            print(f"\033[91m✗ ERROR: Version '{new_version_str}' is not a valid next increment.\033[0m")
             print(f"  The latest version is '{latest_version}'. Allowed next versions are:")
             print(f"  - Patch: '{latest_version.next_patch()}'")
             print(f"  - Minor: '{latest_version.next_minor()}'")
             print(f"  - Major: '{latest_version.next_major()}'")
             sys.exit(1)
 
-    print(f"  [92m✓ New version '{new_version_str}' is a valid increment.[0m")
-
+    print(f"  \033[92m✓ New version '{new_version_str}' is a valid increment.\033[0m")
 
     return new_version_str, component_name
 
@@ -205,16 +204,16 @@ def run_validation():
     )
     # Exclude the meta-schema itself from validation
     schema_files = [f for f in schema_files if f != CONFIG.get('meta_schema_file')]
-    
+
     all_valid = True
     for schema_file in schema_files:
         print(f"  Validating {schema_file}...")
         try:
             schema_instance = load_yaml(schema_file)
             validate(instance=schema_instance, schema=meta_schema)
-            print("  [92m✓ OK[0m")
+            print("  \033[92m✓ OK\033[0m")
         except Exception as e:
-            print(f"  [91m✗ ERROR: {e}[0m")
+            print(f"  \033[91m✗ ERROR: {e}\033[0m")
             all_valid = False
 
     if not all_valid:
@@ -241,48 +240,62 @@ def run_release():
     # Set TLS verification for Vault connection
     if vault_cacert:
         verify_tls = vault_cacert
-        print(f"[INFO] Using CA cert for Vault TLS verification:"
-              f" {vault_cacert}")
+        print(f"[INFO] Using CA cert for Vault TLS verification: {vault_cacert}")
     else:
         verify_tls = False
-        print("[93m[WARNING] Vault TLS verification is disabled. "
-              "Do not use in production.[0m")
+        print("\033[93m[WARNING] Vault TLS verification is disabled. Do not use in production.\033[0m")
 
     # 1. Prepare project.yaml with version and timestamp
     full_project_config = load_project_config(full_config=True)
     if 'release' in full_project_config:
-        del full_project_config['release'] # Clean previous release block
-    
-    release_block_for_hashing = {
+        del full_project_config['release']
+
+    release_block = {
         "version": release_version,
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
     }
-    full_project_config['release'] = release_block_for_hashing
+    full_project_config['release'] = release_block
     write_yaml('project.yaml', full_project_config)
     print("  - Updated project.yaml with version and timestamp.")
 
-    # 2. Stage all changes and get the repository tree hash
+    # 2. Stage all changes and get the repository tree hash (source_hash)
     print("  - Staging all changes to calculate repository state...")
     run_git_command(['git', 'add', '.'])
     tree_id = run_git_command(['git', 'write-tree'])
     print(f"  - Staged content tree ID: {tree_id[:12]}...")
-    repo_hash = get_reproducible_repo_hash(tree_id)
-    print(f"  - Calculated reproducible repository hash: {repo_hash[:12]}...")
+    source_hash = get_reproducible_repo_hash(tree_id)
+    print(f"  - Calculated source hash: {source_hash[:12]}...")
 
-    # 3. Prepare the final release block for signing
-    release_block_for_signing = release_block_for_hashing.copy()
-    release_block_for_signing['repository_tree_hash'] = repo_hash
+    # 3. Compute build_hash: marker tree final result of source + build environment.
+    #    build_hash = SHA256(source_hash : deps_hash : dockerfile_hash)
+    #    deps_hash     = SHA256(sorted pip freeze) — pinned packages inside Docker
+    #    dockerfile_hash = SHA256(Dockerfile content) — base image + system deps
+    try:
+        pip_out = subprocess.run(
+            ['pip', 'freeze'], capture_output=True, text=True, check=True
+        ).stdout
+        sorted_deps = '\n'.join(sorted(pip_out.strip().split('\n')))
+        deps_hash = get_sha256_b64(sorted_deps.encode('utf-8'))
+    except Exception:
+        deps_hash = 'unavailable'
+    try:
+        with open('Dockerfile', 'rb') as _f:
+            dockerfile_hash = get_sha256_b64(_f.read())
+    except FileNotFoundError:
+        dockerfile_hash = 'unavailable'
+    build_hash = get_sha256_b64(
+        f"{source_hash}:{deps_hash}:{dockerfile_hash}".encode('utf-8')
+    )
+    print(f"  - Calculated build hash: {build_hash[:12]}...")
 
-    # 4. Write the final, signed release block to project.yaml
-
-    final_release_block = release_block_for_signing.copy()
-    final_release_block['sign'] = 'XyyyyX'
-    final_release_block['release'] = f"{repo_hash[:12]}"
-    full_project_config['release'] = release_block_for_hashing
-
+    # 4. Write release block to project.yaml (release.sh adds sign + cert on top)
+    release_block['repository_tree_hash'] = source_hash
+    release_block['build_hash'] = build_hash
+    full_project_config['release'] = release_block
     write_yaml('project.yaml', full_project_config)
-    print("  - [92m✓ project.yaml has been finalized with the release signature.[0m")
-    print(f"  - [93mACTION REQUIRED: Please commit the changes and create the tag: git tag {component_name}@v{release_version}[0m")
+    print("  - \033[92m✓ project.yaml finalized with source_hash + build_hash.\033[0m")
+    print(f"  - \033[93mACTION REQUIRED: git tag {component_name}@v{release_version}\033[0m")
+
 
 def run_primitive_validation():
     """Validates all primitive YAML files in schemas/ against schemas/index.yaml."""
