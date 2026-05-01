@@ -266,27 +266,9 @@ def run_release():
     source_hash = get_reproducible_repo_hash(tree_id)
     print(f"  - Calculated source hash: {source_hash[:12]}...")
 
-    # 3. Compute build_hash: marker tree final result of source + build environment.
-    #    build_hash = SHA256(source_hash : deps_hash : dockerfile_hash)
-    #    deps_hash     = SHA256(sorted pip freeze) — pinned packages inside Docker
-    #    dockerfile_hash = SHA256(Dockerfile content) — base image + system deps
-    try:
-        pip_out = subprocess.run(
-            ['pip', 'freeze'], capture_output=True, text=True, check=True
-        ).stdout
-        sorted_deps = '\n'.join(sorted(pip_out.strip().split('\n')))
-        deps_hash = get_sha256_b64(sorted_deps.encode('utf-8'))
-    except Exception:
-        deps_hash = 'unavailable'
-    try:
-        with open('Dockerfile', 'rb') as _f:
-            dockerfile_hash = get_sha256_b64(_f.read())
-    except FileNotFoundError:
-        dockerfile_hash = 'unavailable'
-    build_hash = get_sha256_b64(
-        f"{source_hash}:{deps_hash}:{dockerfile_hash}".encode('utf-8')
-    )
-    print(f"  - Calculated build hash: {build_hash[:12]}...")
+    # 3. build_hash = source_hash egyelőre — tényleges build env nincs még
+    build_hash = source_hash
+    print(f"  - Build hash (= source hash until real build env): {build_hash[:12]}...")
 
     # 4. Write release block to project.yaml (release.sh adds sign + cert on top)
     release_block['repository_tree_hash'] = source_hash
