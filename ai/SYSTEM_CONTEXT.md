@@ -175,7 +175,7 @@ Phase 1–7 végrehajtva. A repo első signed release-szel lezárt.
 ```bash
 # Előfeltételek
 git checkout -b primitives/releases/vX.Y.Z
-tools/vault-sign-agent.sh -k <EEC/SGZ_CA_2026.key> -c <EEC/SGZ_CA_2026.crt>
+tools/vault-sign-agent.sh -k <developer.key> -c <developer.crt>
 
 # Release
 export VAULT_ADDR="https://127.0.0.1:18200"

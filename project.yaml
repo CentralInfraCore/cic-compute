@@ -9,7 +9,7 @@ project:
     supported_until: '2027-12-31'
   contacts:
     - type: email
-      value: gabor.sinko@paynance.hu
+      value: sinkog@centralinfracore.hu
   links:
     - name: repository
       url: https://github.com/CentralInfraCore/cic-primitives.git
