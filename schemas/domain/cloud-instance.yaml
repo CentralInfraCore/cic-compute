@@ -1,0 +1,325 @@
+---
+metadata:
+  name: CloudInstance
+  version: v0.0.dev
+  description: >
+    Cloud compute instance mint ManagedEntity specializáció.
+    Provider-agnosztikus: AWS EC2, GCP Compute, Azure VM, Hetzner Cloud
+    egyaránt leírható. Instance type alapú erőforrás-meghatározás.
+  owner: Gabor Zoltan Sinko
+  tags:
+    - domain-composition
+    - compute
+    - cloud
+  validatedBy:
+    name: cic-primitives
+    version: v0.1.0
+
+spec:
+  kind: DomainComposition
+  base:
+    aggregate: ManagedEntity
+    ref: schemas/aggregate/managed-entity.yaml
+
+  # ── Identity ────────────────────────────────────────────────────────────────
+  identity:
+    atomic_ref: schemas/atomic/identity.yaml
+    kind: CloudInstance
+    namespace: "cic:compute"
+    version: v0.1.dev
+    base: "cic:core:ManagedEntity"
+    abstract: false
+    description: Cloud compute instance — provider-agnosztikus erőforrás egység
+
+  # ── ConfigSurface ────────────────────────────────────────────────────────────
+  config_surface:
+    aggregate_ref: schemas/aggregate/config-surface.yaml
+    nodes:
+      - name: cloud_provider
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: string
+        role: config
+        mandatory: true
+        description: Cloud provider azonosítója
+        contract:
+          - type: enum
+            expression: [aws, gcp, azure, hcloud, do, ovh]
+
+      - name: instance_type
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: string
+        role: config
+        mandatory: true
+        description: >
+          Provider-specifikus instance típus
+          (pl. t3.medium, n2-standard-4, Standard_D2s_v3, cx21)
+
+      - name: region
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: string
+        role: config
+        mandatory: true
+        description: Cloud régió (pl. eu-central-1, europe-west1, westeurope)
+
+      - name: availability_zone
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: string
+        role: config
+        optional: true
+        description: Availability zone a régión belül
+
+      - name: os_image
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: string
+        role: config
+        mandatory: true
+        description: OS image azonosítója (provider-specifikus AMI/image ID vagy alias)
+
+      - name: spot
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: boolean
+        role: config
+        optional: true
+        default: false
+        description: Spot/preemptible instance (olcsóbb, de megszakítható)
+
+      - name: tags
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: collection
+        collection_variant: list
+        role: config
+        optional: true
+        description: Provider tag-ek (cost allocation, environment stb.)
+        item_fields:
+          - name: key
+            shape_type: scalar
+            scalar_type: string
+            role: key
+          - name: value
+            shape_type: scalar
+            scalar_type: string
+
+  # ── StateSurface ─────────────────────────────────────────────────────────────
+  state_surface:
+    aggregate_ref: schemas/aggregate/state-surface.yaml
+    source: cloud-provider-adapter
+    freshness:
+      ttl: 30s
+      strategy: event-driven
+    nodes:
+      - name: power_state
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: string
+        role: state
+        description: Aktuális állapot
+        contract:
+          - type: enum
+            expression: [running, stopped, stopping, terminated, pending, unknown]
+
+      - name: public_ip
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: string
+        role: state
+        optional: true
+        description: Nyilvános IP cím (ha van)
+
+      - name: private_ip
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: string
+        role: state
+        optional: true
+        description: Privát IP cím
+
+      - name: provider_id
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: string
+        role: state
+        description: Provider-specifikus instance ID (pl. i-0abc123, projects/.../instances/...)
+
+      - name: spot_interrupted
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: boolean
+        role: state
+        optional: true
+        description: Spot instance megszakítás jelzés
+
+  # ── OperationSurface ─────────────────────────────────────────────────────────
+  operation_surface:
+    aggregate_ref: schemas/aggregate/operation-surface.yaml
+    operations:
+      - name: start
+        atomic_ref: schemas/atomic/behavior.yaml
+        type: action
+        idempotent: true
+        description: Instance indítása (stopped → running)
+        input: null
+        output:
+          - name: power_state
+            shape_type: scalar
+            scalar_type: string
+
+      - name: stop
+        atomic_ref: schemas/atomic/behavior.yaml
+        type: action
+        idempotent: true
+        description: Instance leállítása (running → stopped, megőrzött disk)
+        input:
+          - name: force
+            shape_type: scalar
+            scalar_type: boolean
+            default: false
+        output:
+          - name: power_state
+            shape_type: scalar
+            scalar_type: string
+
+      - name: terminate
+        atomic_ref: schemas/atomic/behavior.yaml
+        type: operation
+        idempotent: false
+        description: Instance végleges törlése (disk-ek is törlődnek)
+        input:
+          - name: confirm
+            shape_type: scalar
+            scalar_type: boolean
+            mandatory: true
+        output:
+          - name: power_state
+            shape_type: scalar
+            scalar_type: string
+
+      - name: resize
+        atomic_ref: schemas/atomic/behavior.yaml
+        type: operation
+        idempotent: false
+        description: Instance type módosítása (stop szükséges)
+        input:
+          - name: instance_type
+            shape_type: scalar
+            scalar_type: string
+            mandatory: true
+        output:
+          - name: job_id
+            shape_type: scalar
+            scalar_type: string
+
+  # ── NotificationSurface ──────────────────────────────────────────────────────
+  notification_surface:
+    events:
+      - name: power-state-changed
+        atomic_ref: schemas/atomic/event.yaml
+        trigger: state_change
+        severity: info
+        description: Instance állapot megváltozott
+        payload:
+          - name: previous_state
+            shape_type: scalar
+            scalar_type: string
+          - name: current_state
+            shape_type: scalar
+            scalar_type: string
+
+      - name: spot-interrupted
+        atomic_ref: schemas/atomic/event.yaml
+        trigger: explicit
+        severity: critical
+        description: Spot/preemptible instance megszakítás értesítés (2 perces figyelmeztetés)
+        payload:
+          - name: termination_time
+            shape_type: scalar
+            scalar_type: string
+
+  # ── BindingSurface ───────────────────────────────────────────────────────────
+  binding_surface:
+    addresses:
+      - atomic_ref: schemas/atomic/address.yaml
+        schema_path: "/cic-compute:cloud-instances/instance={provider},{region},{id}"
+        api_path: "/restconf/data/cic-compute:cloud-instances/instance={provider},{region},{id}"
+        logical_id: "cic:compute:{provider}:{region}:{id}"
+        namespace: "cic:compute"
+    adapter: cloud-provider-adapter
+
+# ── Levezetési lánc ───────────────────────────────────────────────────────────
+derivation_chain:
+
+  yang:
+    module: cic-compute-cloud
+    namespace: "urn:cic:compute:cloud"
+    content: |
+      module cic-compute-cloud {
+        namespace "urn:cic:compute:cloud";
+        prefix cic-cloud;
+
+        list instance {
+          key "provider region id";
+          leaf provider { type enumeration { enum aws; enum gcp; enum azure; enum hcloud; } }
+          leaf region   { type string; }
+          leaf id       { type string; }
+
+          container config {
+            leaf instance-type        { type string; mandatory true; }
+            leaf os-image             { type string; mandatory true; }
+            leaf availability-zone    { type string; }
+            leaf spot                 { type boolean; default false; }
+          }
+
+          container state {
+            config false;
+            leaf power-state    { type enumeration { enum running; enum stopped; enum terminated; enum pending; } }
+            leaf public-ip      { type string; }
+            leaf private-ip     { type string; }
+            leaf provider-id    { type string; }
+            leaf spot-interrupted { type boolean; }
+          }
+
+          action start     { output { leaf power-state { type string; } } }
+          action stop      { input { leaf force { type boolean; default false; } } }
+          action terminate { input { leaf confirm { type boolean; mandatory true; } } }
+
+          notification spot-interrupted {
+            leaf termination-time { type string; }
+          }
+        }
+      }
+
+  restconf:
+    collection: "GET /restconf/data/cic-compute:cloud-instances"
+    instance:   "GET /restconf/data/cic-compute:cloud-instances/instance={provider},{region},{id}"
+    config:
+      read:   "GET   /restconf/data/cic-compute:cloud-instances/instance={provider},{region},{id}/config"
+      update: "PUT   /restconf/data/cic-compute:cloud-instances/instance={provider},{region},{id}/config"
+    state:
+      read:   "GET   /restconf/data/cic-compute:cloud-instances/instance={provider},{region},{id}/state"
+    operations:
+      start:     "POST /restconf/operations/cic-compute:cloud-instances/instance={provider},{region},{id}/start"
+      stop:      "POST /restconf/operations/cic-compute:cloud-instances/instance={provider},{region},{id}/stop"
+      terminate: "POST /restconf/operations/cic-compute:cloud-instances/instance={provider},{region},{id}/terminate"
+      resize:    "POST /restconf/operations/cic-compute:cloud-instances/instance={provider},{region},{id}/resize"
+    events:
+      stream: "GET /restconf/streams/cic-compute-cloud-events"
+
+  runtime:
+    reconcile_loop: |
+      1. observe:   cloud-provider-adapter.get_instance(provider, region, id) → state_surface
+      2. compare:   diff(config_surface, state_surface) → drift?
+      3. if drift:
+           power_state wrong     → start/stop action
+           instance_type changed → resize operation (stop → resize → start)
+           os_image changed      → terminate + reprovision
+      4. emit:      spot-interrupted event ha provider jelzi
+    adapter_contract:
+      aws:   "EC2 DescribeInstances / StartInstances / StopInstances"
+      gcp:   "Compute instances.get / instances.start / instances.stop"
+      azure: "VirtualMachines get / start / deallocate"
+      hcloud: "Servers get / poweron / poweroff"

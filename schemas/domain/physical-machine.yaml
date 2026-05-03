@@ -1,0 +1,335 @@
+---
+metadata:
+  name: PhysicalMachine
+  version: v0.0.dev
+  description: >
+    Fizikai szerver mint ManagedEntity specializáció.
+    IPMI/Redfish alapú power management, bare metal provisioning.
+    Hypervisorra nem épít — közvetlenül kezelt hardver egység.
+  owner: Gabor Zoltan Sinko
+  tags:
+    - domain-composition
+    - compute
+    - bare-metal
+  validatedBy:
+    name: cic-primitives
+    version: v0.1.0
+
+spec:
+  kind: DomainComposition
+  base:
+    aggregate: ManagedEntity
+    ref: schemas/aggregate/managed-entity.yaml
+
+  # ── Identity ────────────────────────────────────────────────────────────────
+  identity:
+    atomic_ref: schemas/atomic/identity.yaml
+    kind: PhysicalMachine
+    namespace: "cic:compute"
+    version: v0.1.dev
+    base: "cic:core:ManagedEntity"
+    abstract: false
+    description: Fizikai szerver — IPMI/Redfish alapú vezérlés
+
+  # ── ConfigSurface ────────────────────────────────────────────────────────────
+  config_surface:
+    aggregate_ref: schemas/aggregate/config-surface.yaml
+    nodes:
+      - name: cpu_model
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: string
+        role: config
+        optional: true
+        description: CPU model azonosítója (pl. Intel Xeon Gold 6338)
+
+      - name: cpu_cores
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: integer
+        role: config
+        mandatory: true
+        description: Fizikai CPU magok száma
+
+      - name: memory_mb
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: integer
+        role: config
+        mandatory: true
+        description: Telepített memória MB-ban
+
+      - name: bmc_address
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: string
+        role: config
+        mandatory: true
+        description: BMC/iDRAC/iLO IP cím (IPMI/Redfish belépési pont)
+
+      - name: os_image
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: string
+        role: config
+        optional: true
+        description: Telepítendő OS image azonosítója (bare metal provisioning)
+
+      - name: network_interfaces
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: collection
+        collection_variant: list
+        role: config
+        optional: true
+        description: Hálózati interfészek listája
+        item_fields:
+          - name: name
+            shape_type: scalar
+            scalar_type: string
+            role: key
+          - name: mac_address
+            shape_type: scalar
+            scalar_type: string
+            mandatory: true
+          - name: network
+            shape_type: scalar
+            scalar_type: string
+            optional: true
+
+  # ── StateSurface ─────────────────────────────────────────────────────────────
+  state_surface:
+    aggregate_ref: schemas/aggregate/state-surface.yaml
+    source: ipmi-adapter
+    freshness:
+      ttl: 60s
+      strategy: polling
+    nodes:
+      - name: power_state
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: string
+        role: state
+        description: Aktuális energiaállapot
+        contract:
+          - type: enum
+            expression: [on, off, reset, unknown]
+
+      - name: hardware_health
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: string
+        role: state
+        description: Hardver egészségi állapot (IPMI SEL / Redfish alapján)
+        contract:
+          - type: enum
+            expression: [ok, degraded, critical, unknown]
+
+      - name: uptime_seconds
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: integer
+        role: operational
+        optional: true
+        description: Futásidő másodpercben
+
+      - name: cpu_temperature_celsius
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: number
+        role: operational
+        optional: true
+        description: CPU hőmérséklet Celsius fokban
+
+      - name: ip_addresses
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: collection
+        collection_variant: list
+        role: state
+        optional: true
+        description: Kiosztott IP címek
+        item_fields:
+          - name: interface
+            shape_type: scalar
+            scalar_type: string
+            role: key
+          - name: address
+            shape_type: scalar
+            scalar_type: string
+
+  # ── OperationSurface ─────────────────────────────────────────────────────────
+  operation_surface:
+    aggregate_ref: schemas/aggregate/operation-surface.yaml
+    operations:
+      - name: power_on
+        atomic_ref: schemas/atomic/behavior.yaml
+        type: action
+        idempotent: true
+        description: Szerver bekapcsolása (IPMI chassis power on)
+        input: null
+        output:
+          - name: power_state
+            shape_type: scalar
+            scalar_type: string
+
+      - name: power_off
+        atomic_ref: schemas/atomic/behavior.yaml
+        type: action
+        idempotent: true
+        description: Szerver kikapcsolása (graceful OS shutdown)
+        input:
+          - name: force
+            shape_type: scalar
+            scalar_type: boolean
+            default: false
+        output:
+          - name: power_state
+            shape_type: scalar
+            scalar_type: string
+
+      - name: reset
+        atomic_ref: schemas/atomic/behavior.yaml
+        type: action
+        idempotent: false
+        description: Hard reset (IPMI chassis reset)
+        input: null
+        output:
+          - name: power_state
+            shape_type: scalar
+            scalar_type: string
+
+      - name: provision
+        atomic_ref: schemas/atomic/behavior.yaml
+        type: operation
+        idempotent: false
+        description: OS telepítése PXE/network boot alapján
+        input:
+          - name: os_image
+            shape_type: scalar
+            scalar_type: string
+            mandatory: true
+        output:
+          - name: job_id
+            shape_type: scalar
+            scalar_type: string
+
+  # ── NotificationSurface ──────────────────────────────────────────────────────
+  notification_surface:
+    events:
+      - name: power-state-changed
+        atomic_ref: schemas/atomic/event.yaml
+        trigger: state_change
+        severity: info
+        description: Szerver energiaállapot megváltozott
+        payload:
+          - name: previous_state
+            shape_type: scalar
+            scalar_type: string
+          - name: current_state
+            shape_type: scalar
+            scalar_type: string
+
+      - name: hardware-health-degraded
+        atomic_ref: schemas/atomic/event.yaml
+        trigger: state_change
+        severity: warning
+        description: Hardver egészségi állapot romlott
+        payload:
+          - name: component
+            shape_type: scalar
+            scalar_type: string
+          - name: health
+            shape_type: scalar
+            scalar_type: string
+
+      - name: temperature-threshold-exceeded
+        atomic_ref: schemas/atomic/event.yaml
+        trigger: threshold
+        severity: critical
+        description: CPU hőmérséklet kritikus küszöböt átlépett
+        payload:
+          - name: temperature_celsius
+            shape_type: scalar
+            scalar_type: number
+          - name: threshold_celsius
+            shape_type: scalar
+            scalar_type: number
+
+  # ── BindingSurface ───────────────────────────────────────────────────────────
+  binding_surface:
+    addresses:
+      - atomic_ref: schemas/atomic/address.yaml
+        schema_path: "/cic-compute:servers/server={namespace},{id}"
+        api_path: "/restconf/data/cic-compute:servers/server={namespace},{id}"
+        logical_id: "cic:compute:{namespace}:{id}"
+        namespace: "cic:compute"
+    adapter: ipmi-adapter
+
+# ── Levezetési lánc ───────────────────────────────────────────────────────────
+derivation_chain:
+
+  yang:
+    module: cic-compute-server
+    namespace: "urn:cic:compute:server"
+    content: |
+      module cic-compute-server {
+        namespace "urn:cic:compute:server";
+        prefix cic-srv;
+
+        list server {
+          key "namespace id";
+          leaf namespace  { type string; }
+          leaf id         { type string; }
+
+          container config {
+            leaf cpu-model   { type string; }
+            leaf cpu-cores   { type uint16; mandatory true; }
+            leaf memory-mb   { type uint32; mandatory true; }
+            leaf bmc-address { type string; mandatory true; }
+            leaf os-image    { type string; }
+          }
+
+          container state {
+            config false;
+            leaf power-state        { type enumeration { enum on; enum off; enum reset; enum unknown; } }
+            leaf hardware-health    { type enumeration { enum ok; enum degraded; enum critical; enum unknown; } }
+            leaf uptime-seconds     { type uint64; }
+            leaf cpu-temp-celsius   { type decimal64 { fraction-digits 1; } }
+          }
+
+          action power-on  { output { leaf power-state { type string; } } }
+          action power-off { input { leaf force { type boolean; default false; } } }
+          action reset     {}
+
+          notification hardware-health-degraded {
+            leaf component { type string; }
+            leaf health    { type string; }
+          }
+        }
+      }
+
+  restconf:
+    collection: "GET /restconf/data/cic-compute:servers"
+    instance:   "GET /restconf/data/cic-compute:servers/server={namespace},{id}"
+    config:
+      read:   "GET   /restconf/data/cic-compute:servers/server={namespace},{id}/config"
+      update: "PUT   /restconf/data/cic-compute:servers/server={namespace},{id}/config"
+    state:
+      read:   "GET   /restconf/data/cic-compute:servers/server={namespace},{id}/state"
+    operations:
+      power_on:  "POST /restconf/operations/cic-compute:servers/server={namespace},{id}/power-on"
+      power_off: "POST /restconf/operations/cic-compute:servers/server={namespace},{id}/power-off"
+      reset:     "POST /restconf/operations/cic-compute:servers/server={namespace},{id}/reset"
+      provision: "POST /restconf/operations/cic-compute:servers/server={namespace},{id}/provision"
+
+  runtime:
+    reconcile_loop: |
+      1. observe:   ipmi-adapter.get_server(namespace, id) → state_surface
+      2. compare:   diff(config_surface, state_surface) → drift?
+      3. if drift:
+           power_state wrong   → power_on/power_off action
+           os_image changed    → provision operation
+      4. emit:      hardware-health-degraded ha health romlott
+    adapter_contract:
+      observe: "Redfish GET /redfish/v1/Systems/{id}"
+      apply:   "Redfish POST /redfish/v1/Systems/{id}/Actions/ComputerSystem.Reset"
+      watch:   "IPMI SEL polling / Redfish SSE"

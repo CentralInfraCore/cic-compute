@@ -46,7 +46,7 @@ entries:
   # ── Phase 2: Domain bővítés ─────────────────────────────────────────────────
 
   - task: "physical-machine-domain"
-    status: pending
+    status: done
     priority: 3
     milestone: domain-expansion
     blocked_by: "virtual-machine-domain"
@@ -65,7 +65,7 @@ entries:
       - make validate
 
   - task: "cloud-instance-domain"
-    status: pending
+    status: done
     priority: 4
     milestone: domain-expansion
     blocked_by: "virtual-machine-domain"
