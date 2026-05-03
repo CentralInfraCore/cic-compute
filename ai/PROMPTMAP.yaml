@@ -87,7 +87,7 @@ entries:
   # ── Phase 3: Adapter contracts ──────────────────────────────────────────────
 
   - task: "hypervisor-adapter-contract"
-    status: pending
+    status: done
     priority: 5
     milestone: adapter-contracts
     blocked_by: "virtual-machine-domain"
@@ -106,7 +106,7 @@ entries:
       - make validate
 
   - task: "ipmi-adapter-contract"
-    status: pending
+    status: done
     priority: 6
     milestone: adapter-contracts
     blocked_by: "physical-machine-domain"
