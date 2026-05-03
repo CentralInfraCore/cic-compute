@@ -1,6 +1,7 @@
 project:
   name: cic-compute
-  description: CIC compute domain — virtual machines, bare metal and cloud instances as ManagedEntity specializations derived from cic-primitives
+  description: CIC compute domain — virtual machines, bare metal and cloud instances
+    as ManagedEntity specializations derived from cic-primitives
   license: CC-BY-NC-SA-4.0
   main_branch: compute/main
   owner: Gabor Zoltan Sinko
@@ -13,14 +14,43 @@ project:
   links:
     - name: repository
       url: https://github.com/CentralInfraCore/cic-compute.git
-
 compiler_settings:
   meta_schemas_dir: ./
   source_dir: schemas
   meta_schema_file: md.meta.schema.yaml
   primitive_schema_file: schemas/index.yaml
   vault_key_name: cic-my-sign-key
-
 x-cic:
   repo_type: domain
   base_primitive: cic-primitives@v0.1.0
+release:
+  version: 0.1.0
+  timestamp: '2026-05-03T20:32:52.875090+00:00'
+  repository_tree_hash: 0M1J/ugy6UuhEnKCFoB+gqRvGlvCb7rMDoFM4jAE41Y=
+  build_hash: QHUpVHxQZFZOioToQlcZNqucKakqAk+INNoAap/yK9M=
+  sign: vault:v1:MEUCIEbb28kqMdhpi/gZEizf0HzkdXW8TcIzwpoaoIsAV58MAiEAjUC7indoJFtXhsc43lT7zpmJKRDbdii7Bw49iSXuX0E=
+  cert: '-----BEGIN CERTIFICATE-----
+
+    MIICBjCCAaygAwIBAgIUSnRMR6RPnEbg296XWPOqq/u5PCwwCgYIKoZIzj0EAwIw
+
+    QzELMAkGA1UEBhMCSFUxGTAXBgNVBAoMEENlbnRyYWxJbmZyYUNvcmUxGTAXBgNV
+
+    BAMMEENJQyBEZXZlbG9wZXIgQ0EwHhcNMjYwMzIwMTMyMjU5WhcNMjYxMjMxMTMy
+
+    MjU5WjBFMQswCQYDVQQGEwJIVTEZMBcGA1UECgwQQ2VudHJhbEluZnJhQ29yZTEb
+
+    MBkGA1UEAwwSR2Fib3IgWm9sdGFuIFNpbmtvMFkwEwYHKoZIzj0CAQYIKoZIzj0D
+
+    AQcDQgAEIG2CVmTfmLB9pLLclj7YmP2eedAjklpy4LGrU2ijoiy6Xqpuybv7OgJe
+
+    i+ez31s65NEV8+X/ByeX1cstR988z6N8MHowCQYDVR0TBAIwADAdBgNVHQ4EFgQU
+
+    yZN6AIX/TNnIJ9GwAa/NRN3ujHAwHwYDVR0jBBgwFoAUXn6CHYzPUqU4JVP8g+OS
+
+    WeDYjhcwDgYDVR0PAQH/BAQDAgeAMB0GA1UdJQQWMBQGCCsGAQUFBwMCBggrBgEF
+
+    BQcDBDAKBggqhkjOPQQDAgNIADBFAiEA+bFzXRoJ4PCQbhAAtpkcMjt0vNj5rEW0
+
+    lOMBGDNyaWkCIB1vmM7PcZzv/c9bIrxF5kqv6QXomouhByUfeNUTbpKW
+
+    -----END CERTIFICATE-----'
