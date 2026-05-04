@@ -33,7 +33,7 @@ spec:
       - name: provider
         type: enum
         mandatory: true
-        values: [aws, gcp, azure, hcloud, do, ovh]
+        values: [aws, gcp, azure, hcloud, do, ovh, oci]
         description: Cloud provider azonosítója — routing kulcs
       - name: location
         type: string
@@ -164,5 +164,7 @@ spec:
       provider: azure
     - name: hcloud-adapter
       provider: hcloud
-    - name: oci-compute-adapter
+    - name: ovh-adapter
       provider: ovh
+    - name: oci-compute-adapter
+      provider: oci

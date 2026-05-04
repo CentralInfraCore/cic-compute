@@ -492,7 +492,7 @@ spec:
             type: string
             description: >
               Ki kezeli az erőforrást — routing kulcs az adapter kiválasztásához.
-              cloud: enum [aws, gcp, azure, hcloud, do, ovh]
+              cloud: enum [aws, gcp, azure, hcloud, do, ovh, oci]
               vm: hypervisor azonosítója (pl. proxmox-01, esxi-cluster-a)
               physical: datacenter/cluster azonosítója (pl. dc-ams-01)
           - name: location
@@ -521,7 +521,7 @@ spec:
           capabilities: [restart, bare_metal_provision, hardware_monitoring]
         - name: cloud-provider-adapter
           backend: cloud
-          provider: [aws, gcp, azure, hcloud, do, ovh]
+          provider: [aws, gcp, azure, hcloud, do, ovh, oci]
           capabilities: [cloud, restart, resize, spot, tagging]
 
 # ── Levezetési lánc ───────────────────────────────────────────────────────────
