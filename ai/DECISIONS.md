@@ -151,6 +151,43 @@ tartalmaz futtatási logikát.
 
 ---
 
+## D-010 — ComputeResource: egységes séma, adapter hordozza a paradigmát (2026-05-04)
+
+**Döntés:** A VirtualMachine, PhysicalMachine, CloudInstance különálló DomainComposition-ök
+helyett egyetlen `ComputeResource` séma van. A paradigma (vm/physical/cloud) az address és
+adapter rétegben van, nem a config_surface-ben.
+
+**Miért:** Az `instance_type` statikus lookup tábla — az adapter belügye, nem schema concern.
+OCI Flex shapes esetén direktben cpu/memory spec, AWS/GCP/Azure esetén legközelebbi instance_type
+keresés. A config_surface mindhárom platformon ugyanaz: `cpu_cores/memory_mb/disk_gb/os_image`.
+Paradigma lock-in nélkül lehet VM-ről cloudra migrálni.
+
+**Capability mechanizmus:** A séma felsorolja az összes lehetséges state/ops/event mezőt
+capability flaggel jelölve. Az adapter deklarálja a binding_surface-ben mit tud kezelni.
+
+**Következmény:** virtual-machine.yaml, physical-machine.yaml, cloud-instance.yaml deprecated
+és törölve. Egyetlen forrás: `schemas/domain/compute-resource.yaml`.
+
+---
+
+## D-011 — power_state: tranziens és terminális állapotok mindhárom platformon (2026-05-04)
+
+**Döntés:** A `power_state` enum tartalmazza: `running, starting, stopping, stopped, paused, terminated, error, unknown`.
+
+**Miért:** `starting`/`stopping` valós tranziens állapotok minden platformon — nem csak cloud
+API aszinkronitás artifakt. VM: OS boot / graceful shutdown. Physical: POST+boot / cache flush,
+OS shutdown. Cloud: scheduler+storage / billing lezárás. `terminated` = törlés/decommission
+folyamatban (physical: még a teremben van, VM: lemez törlés, cloud: erőforrások felszabadulnak).
+
+**Tranzíció policy:** A séma nem tiltja a `running → terminated` átmenetet. Ez implementációs
+réteg — az adapter dönti el hogy engedi-e. A séma a lehetséges állapotokat definiálja, nem a
+policy-t. Normálisan le kell állítani a gépet, de nem zárható ki hogy futó resource-t töröljenek.
+
+**Következmény:** Az adapter feladata a platform-specifikus állapotok normalizálása
+(pl. cloud `pending` → `starting`, cloud `shutting-down` → `stopping`).
+
+---
+
 ## D-009 — ExecutionSurface szándékosan hiányzik (2026-04-30)
 
 **Döntés:** Az `ExecutionSurface` aggregate (triggers, dependencies, reconciliation,
