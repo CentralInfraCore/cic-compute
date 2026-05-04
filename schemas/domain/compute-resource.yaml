@@ -454,26 +454,49 @@ spec:
   binding_surface:
     addresses:
       - atomic_ref: schemas/atomic/address.yaml
-        schema_path: "/cic-compute:resources/resource={backend},{location},{id}"
-        api_path: "/restconf/data/cic-compute:resources/resource={backend},{location},{id}"
-        logical_id: "cic:compute:{backend}:{location}:{id}"
+        schema_path: "/cic-compute:resources/resource={backend},{provider},{location},{id}"
+        api_path: "/restconf/data/cic-compute:resources/resource={backend},{provider},{location},{id}"
+        logical_id: "cic:compute:{backend}:{provider}:{location}:{id}"
         namespace: "cic:compute"
+        key_fields:
+          - name: backend
+            type: enum
+            values: [vm, physical, cloud]
+          - name: provider
+            type: string
+            description: >
+              Ki kezeli az erőforrást — routing kulcs az adapter kiválasztásához.
+              cloud: enum [aws, gcp, azure, hcloud, do, ovh]
+              vm: hypervisor azonosítója (pl. proxmox-01, esxi-cluster-a)
+              physical: datacenter/cluster azonosítója (pl. dc-ams-01)
+          - name: location
+            type: string
+            description: >
+              Hol fut az erőforrás.
+              cloud: provider region (pl. eu-central-1, europe-west1)
+              vm: "-" (hypervisor kezeli)
+              physical: "-" (datacenter kezeli)
+          - name: id
+            type: string
     adapter: compute-adapter
     adapter_capabilities:
       description: >
         Az adapter deklarálja a támogatott capability-ket a binding rétegben.
         A schema felsorolja az összeset — az adapter szűri le, amit tud kezelni.
+        Routing: backend + provider együtt azonosítja az adapter implementációt.
       known_adapters:
         - name: hypervisor-adapter
           backend: vm
+          provider: "<hypervisor-id>"
           capabilities: [restart, resize, snapshot, live_migration, resource_metrics]
         - name: ipmi-adapter
           backend: physical
+          provider: "<datacenter-id>"
           capabilities: [restart, bare_metal_provision, hardware_monitoring]
         - name: cloud-provider-adapter
           backend: cloud
+          provider: [aws, gcp, azure, hcloud, do, ovh]
           capabilities: [cloud, restart, resize, spot, tagging]
-          providers: [aws, gcp, azure, hcloud, do, ovh]
 
 # ── Levezetési lánc ───────────────────────────────────────────────────────────
 derivation_chain:
@@ -487,10 +510,11 @@ derivation_chain:
         prefix cic-c;
 
         list resource {
-          key "backend location id";
-          leaf backend  { type enumeration { enum vm; enum physical; enum cloud; } }
-          leaf location { type string; }
-          leaf id       { type string; }
+          key "backend provider location id";
+          leaf backend   { type enumeration { enum vm; enum physical; enum cloud; } }
+          leaf provider  { type string; }
+          leaf location  { type string; }
+          leaf id        { type string; }
 
           container config {
             leaf cpu-cores { type uint16; mandatory true; }
@@ -561,28 +585,28 @@ derivation_chain:
 
   restconf:
     collection: "GET /restconf/data/cic-compute:resources"
-    instance:   "GET /restconf/data/cic-compute:resources/resource={backend},{location},{id}"
+    instance:   "GET /restconf/data/cic-compute:resources/resource={backend},{provider},{location},{id}"
     config:
-      read:   "GET   /restconf/data/cic-compute:resources/resource={backend},{location},{id}/config"
-      update: "PUT   /restconf/data/cic-compute:resources/resource={backend},{location},{id}/config"
-      patch:  "PATCH /restconf/data/cic-compute:resources/resource={backend},{location},{id}/config"
+      read:   "GET   /restconf/data/cic-compute:resources/resource={backend},{provider},{location},{id}/config"
+      update: "PUT   /restconf/data/cic-compute:resources/resource={backend},{provider},{location},{id}/config"
+      patch:  "PATCH /restconf/data/cic-compute:resources/resource={backend},{provider},{location},{id}/config"
     state:
-      read:   "GET   /restconf/data/cic-compute:resources/resource={backend},{location},{id}/state"
+      read:   "GET   /restconf/data/cic-compute:resources/resource={backend},{provider},{location},{id}/state"
     operations:
-      start:     "POST /restconf/operations/cic-compute:resources/resource={backend},{location},{id}/start"
-      stop:      "POST /restconf/operations/cic-compute:resources/resource={backend},{location},{id}/stop"
-      restart:   "POST /restconf/operations/cic-compute:resources/resource={backend},{location},{id}/restart"
-      snapshot:  "POST /restconf/operations/cic-compute:resources/resource={backend},{location},{id}/snapshot"
-      migrate:   "POST /restconf/operations/cic-compute:resources/resource={backend},{location},{id}/migrate"
-      provision: "POST /restconf/operations/cic-compute:resources/resource={backend},{location},{id}/provision"
-      terminate: "POST /restconf/operations/cic-compute:resources/resource={backend},{location},{id}/terminate"
-      resize:    "POST /restconf/operations/cic-compute:resources/resource={backend},{location},{id}/resize"
+      start:     "POST /restconf/operations/cic-compute:resources/resource={backend},{provider},{location},{id}/start"
+      stop:      "POST /restconf/operations/cic-compute:resources/resource={backend},{provider},{location},{id}/stop"
+      restart:   "POST /restconf/operations/cic-compute:resources/resource={backend},{provider},{location},{id}/restart"
+      snapshot:  "POST /restconf/operations/cic-compute:resources/resource={backend},{provider},{location},{id}/snapshot"
+      migrate:   "POST /restconf/operations/cic-compute:resources/resource={backend},{provider},{location},{id}/migrate"
+      provision: "POST /restconf/operations/cic-compute:resources/resource={backend},{provider},{location},{id}/provision"
+      terminate: "POST /restconf/operations/cic-compute:resources/resource={backend},{provider},{location},{id}/terminate"
+      resize:    "POST /restconf/operations/cic-compute:resources/resource={backend},{provider},{location},{id}/resize"
     events:
       stream: "GET /restconf/streams/cic-compute-events"
 
   runtime:
     reconcile_loop: |
-      1. observe:   adapter.get(backend, location, id) → state_surface
+      1. observe:   adapter.get(backend, provider, location, id) → state_surface
       2. compare:   diff(config_surface, state_surface) → drift?
       3. if drift:
            power_state wrong  → start/stop
