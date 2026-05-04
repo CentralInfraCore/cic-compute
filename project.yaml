@@ -24,11 +24,11 @@ x-cic:
   repo_type: domain
   base_primitive: cic-primitives@v0.1.0
 release:
-  version: 0.2.0
-  timestamp: '2026-05-04T11:05:25.399282+00:00'
-  repository_tree_hash: bn5ZQS9zNnRsRPpFczCaP4NPN4nxeSsf3wgiDkFdS/k=
-  build_hash: xsdJ6sbNMOGtnK8Q1rD+/+gNe7X9j7X9pog7Hd65C/o=
-  sign: vault:v1:MEUCIHksLtBedYpgvzNwMIblOXqYZmLw/0xInYTxLeDypFTnAiEAsBzrv3tsndGGOE6GDTxg8MHgElpCaYWPmFNWX0rZo50=
+  version: 0.2.1
+  timestamp: '2026-05-04T12:44:28.975414+00:00'
+  repository_tree_hash: V/XFOHqmVnt2xcIVOellTwkgzLBruUtr5Eq04cRRwYU=
+  build_hash: emuArC22lPkqG4KRdGD1eFS4EaxJY1O1M/angGji0eU=
+  sign: vault:v1:MEYCIQDidSMPK6fjc7GTuq7FsNbXxGhI0cpNfb26e/LzkBK07wIhANhF070E6t+cMGK37tUyXLQ6ATmFugk08JH/zNbVNy6+
   cert: '-----BEGIN CERTIFICATE-----
 
     MIICBjCCAaygAwIBAgIUSnRMR6RPnEbg296XWPOqq/u5PCwwCgYIKoZIzj0EAwIw
