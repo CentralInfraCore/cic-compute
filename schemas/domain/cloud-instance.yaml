@@ -1,11 +1,14 @@
+# DEPRECATED: Felváltja schemas/domain/compute-resource.yaml (backend: cloud)
 ---
 metadata:
   name: CloudInstance
   version: v0.0.dev
+  deprecated: true
+  replaced_by: schemas/domain/compute-resource.yaml
   description: >
     Cloud compute instance mint ManagedEntity specializáció.
-    Provider-agnosztikus: AWS EC2, GCP Compute, Azure VM, Hetzner Cloud
-    egyaránt leírható. Instance type alapú erőforrás-meghatározás.
+    Provider-agnosztikus cloud compute egység. Instance type alapú erőforrás-meghatározás.
+    Támogatott providerek: aws, gcp, azure, hcloud, do, ovh.
   owner: Gabor Zoltan Sinko
   tags:
     - domain-composition
@@ -118,6 +121,7 @@ spec:
         shape_type: scalar
         scalar_type: string
         role: state
+        mandatory: true
         description: Aktuális állapot
         contract:
           - type: enum
@@ -144,6 +148,7 @@ spec:
         shape_type: scalar
         scalar_type: string
         role: state
+        mandatory: true
         description: Provider-specifikus instance ID (pl. i-0abc123, projects/.../instances/...)
 
       - name: spot_interrupted
@@ -152,7 +157,10 @@ spec:
         scalar_type: boolean
         role: state
         optional: true
-        description: Spot instance megszakítás jelzés
+        description: >
+          Spot instance megszakítás jelzés — adapter állítja be, amikor a provider
+          jelzi. A spot-interrupted notification ezzel szinkronban kerül kibocsátásra
+          (state = perzisztens tény, event = push értesítés).
 
   # ── OperationSurface ─────────────────────────────────────────────────────────
   operation_surface:
@@ -263,7 +271,7 @@ derivation_chain:
 
         list instance {
           key "provider region id";
-          leaf provider { type enumeration { enum aws; enum gcp; enum azure; enum hcloud; } }
+          leaf provider { type enumeration { enum aws; enum gcp; enum azure; enum hcloud; enum do; enum ovh; } }
           leaf region   { type string; }
           leaf id       { type string; }
 
@@ -286,7 +294,12 @@ derivation_chain:
           action start     { output { leaf power-state { type string; } } }
           action stop      { input { leaf force { type boolean; default false; } } }
           action terminate { input { leaf confirm { type boolean; mandatory true; } } }
+          action resize    { input { leaf instance-type { type string; mandatory true; } } output { leaf job-id { type string; } } }
 
+          notification power-state-changed {
+            leaf previous-state { type string; }
+            leaf current-state  { type string; }
+          }
           notification spot-interrupted {
             leaf termination-time { type string; }
           }
@@ -316,10 +329,7 @@ derivation_chain:
       3. if drift:
            power_state wrong     → start/stop action
            instance_type changed → resize operation (stop → resize → start)
-           os_image changed      → terminate + reprovision
+           os_image changed      → MANUAL ONLY: terminate(confirm=true) + reprovision
+                                   (nem automatizálható — confirm: mandatory: true)
       4. emit:      spot-interrupted event ha provider jelzi
-    adapter_contract:
-      aws:   "EC2 DescribeInstances / StartInstances / StopInstances"
-      gcp:   "Compute instances.get / instances.start / instances.stop"
-      azure: "VirtualMachines get / start / deallocate"
-      hcloud: "Servers get / poweron / poweroff"
+    adapter_contract: schemas/adapters/cloud-provider-adapter.yaml

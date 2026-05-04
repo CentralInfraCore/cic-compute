@@ -1,11 +1,14 @@
+# DEPRECATED: Felváltja schemas/domain/compute-resource.yaml (backend: vm)
 ---
 metadata:
   name: VirtualMachine
   version: v0.0.dev
+  deprecated: true
+  replaced_by: schemas/domain/compute-resource.yaml
   description: >
     Virtual Machine mint ManagedEntity specializáció.
-    Hypervisor-független compute egység: KVM, VMware, cloud instance egyaránt
-    leírható ezzel a DomainComposition-nel.
+    Hypervisor-független compute egység: KVM, VMware, Proxmox alapú VM-ek leírására.
+    Cloud instance-hez használd: CloudInstance (schemas/domain/cloud-instance.yaml).
   owner: Gabor Zoltan Sinko
   tags:
     - domain-composition
@@ -322,9 +325,11 @@ derivation_chain:
             }
           }
 
-          action start   { output { leaf power-state { type string; } } }
-          action stop    { input { leaf force { type boolean; default false; } } }
-          action restart { input { leaf force { type boolean; default false; } } }
+          action start    { output { leaf power-state { type string; } } }
+          action stop     { input { leaf force { type boolean; default false; } } }
+          action restart  { input { leaf force { type boolean; default false; } } }
+          action snapshot { input { leaf snapshot-name { type string; mandatory true; } } output { leaf snapshot-id { type string; } } }
+          action migrate  { input { leaf target-host  { type string; mandatory true; } } output { leaf job-id     { type string; } } }
 
           notification power-state-changed {
             leaf previous-state { type string; }

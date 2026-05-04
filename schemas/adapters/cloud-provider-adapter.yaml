@@ -1,0 +1,127 @@
+---
+metadata:
+  name: cloud-provider-adapter
+  version: v0.0.dev
+  description: >
+    Cloud provider adapter interface contract — CloudInstance DomainComposition runtime kötése.
+    Bármely cloud provider implementálhatja. Ez NEM implementáció — ez az interface
+    amit minden cloud provider adapternek teljesítenie kell.
+  owner: Gabor Zoltan Sinko
+  tags:
+    - adapter-contract
+    - compute
+    - cloud
+  validatedBy:
+    name: cic-primitives
+    version: v0.1.0
+
+spec:
+  kind: AdapterContract
+  domain: "cic:compute:CloudInstance"
+  protocol: "cloud-provider-api"
+
+  address:
+    description: Háromrészes instance azonosítás.
+    fields:
+      - name: provider
+        type: enum
+        mandatory: true
+        values: [aws, gcp, azure, hcloud, do, ovh]
+        description: Cloud provider azonosítója
+      - name: region
+        type: string
+        mandatory: true
+        description: Provider-specifikus régió azonosító
+      - name: id
+        type: string
+        mandatory: true
+        description: Instance azonosítója a provider rendszerében
+
+  operations:
+
+    observe:
+      description: Instance aktuális állapotának lekérdezése → state_surface
+      input: address
+      output:
+        - name: power_state
+          type: string
+          mandatory: true
+          maps_to: state_surface.power_state
+          contract:
+            - type: enum
+              expression: [running, stopped, terminated, pending, unknown]
+        - name: provider_id
+          type: string
+          mandatory: true
+          maps_to: state_surface.provider_id
+        - name: public_ip
+          type: string
+          optional: true
+          maps_to: state_surface.public_ip
+        - name: private_ip
+          type: string
+          optional: true
+          maps_to: state_surface.private_ip
+        - name: spot_interrupted
+          type: boolean
+          optional: true
+          maps_to: state_surface.spot_interrupted
+
+    watch:
+      description: Aszinkron állapotváltozás stream — push vagy polling
+      protocol: event-stream
+      fallback: polling
+      poll_interval_seconds: 30
+      events:
+        - name: power-state-changed
+          trigger: state_change
+        - name: spot-interrupted
+          trigger: explicit
+
+    start:
+      description: Instance indítása
+      idempotent: true
+      precondition: power_state == stopped
+      postcondition: power_state == running
+
+    stop:
+      description: Instance leállítása
+      idempotent: true
+      input:
+        - name: force
+          type: boolean
+          default: false
+      precondition: power_state == running
+      postcondition: power_state == stopped
+
+    terminate:
+      description: Instance végleges törlése — IRREVERSIBLE
+      idempotent: false
+      input:
+        - name: confirm
+          type: boolean
+          mandatory: true
+      precondition: confirm == true
+      postcondition: power_state == terminated
+      note: >
+        Nem hívható automatikus reconcile loop-ból.
+        Kizárólag explicit operátori megerősítéssel (confirm: true).
+
+    resize:
+      description: Instance type módosítása
+      idempotent: false
+      input:
+        - name: instance_type
+          type: string
+          mandatory: true
+      output:
+        - name: job_id
+          type: string
+      precondition: power_state == stopped
+
+  known_implementations:
+    - name: aws-ec2-adapter
+    - name: gcp-compute-adapter
+    - name: azure-compute-adapter
+    - name: hcloud-adapter
+    - name: oci-compute-adapter

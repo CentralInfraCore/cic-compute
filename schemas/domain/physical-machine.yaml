@@ -1,7 +1,10 @@
+# DEPRECATED: Felváltja schemas/domain/compute-resource.yaml (backend: physical)
 ---
 metadata:
   name: PhysicalMachine
   version: v0.0.dev
+  deprecated: true
+  replaced_by: schemas/domain/compute-resource.yaml
   description: >
     Fizikai szerver mint ManagedEntity specializáció.
     IPMI/Redfish alapú power management, bare metal provisioning.

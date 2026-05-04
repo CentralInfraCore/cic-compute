@@ -1,12 +1,16 @@
-# cic-primitives
+# cic-compute
 
-> Ez nem klasszikus repo. Ez AI-operált primitive schema layer.
+> Ez nem klasszikus repo. Ez AI-operált domain schema repo.
 > Emberi belépő: ez a README. AI belépő: `ai/ONBOARDING.md`.
 
-A CIC **meta-séma rétege** — az a szint, amelyből minden domain objektum
-(switch interface, kubernetes pod, service, database, policy) schema-szinten levezethető.
+A CIC **compute domain primitive rétege** — VirtualMachine, PhysicalMachine és CloudInstance
+domain kompozíciók, adapter contractok és YANG/RESTCONF derivációs metaadatok.
 
-Nem domain modell. Nem IaC tool. Nem YANG leíró.
+**Ez a repo nem futtat compute workloadokat.**
+Ez a repo a compute primitive-ek hordozható domain- és adapter-sémáit definiálja.
+Implementációt a runtime repók (cic-relay és adapter implementációk) hordoznak.
+
+Nem hypervisor. Nem cloud provider kliens. Nem IaC tool.
 
 ---
 
