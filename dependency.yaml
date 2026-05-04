@@ -29,7 +29,7 @@ dependencies:
 
   - name: cic-primitives
     source: github.com/CentralInfraCore/cic-primitives
-    tag: primitives/@v0.1.0
+    tag: primitives/@v0.1.1
     mode: remote-merge
     purpose: primitive-schema-base
     imported_paths:

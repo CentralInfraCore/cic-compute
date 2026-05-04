@@ -1,32 +1,28 @@
-# CIC Primitives — Claude kontextus
+# cic-compute — Claude kontextus
 
 ## Mi ez a rendszer
 
-A `cic-primitives` a CentralInfraCore **meta-séma rétege** — az a szint, amelyből
-minden domain objektum (switch interface, kubernetes pod, service, database, policy)
-schema-szinten levezethető.
+A `cic-compute` a CentralInfraCore **compute domain schema repo** — a cic-primitives leszármazottja.
+VirtualMachine, PhysicalMachine és CloudInstance helyett egyetlen egységes:
+`schemas/domain/compute-resource.yaml` (D-010).
 
-Nem domain modell. Nem IaC tool. Nem YANG leíró.
-
-A primitívek azok az **irreducibilis szemantikai atomok és kompozícióik**, amelyekből
-bármilyen menedzselt objektum strukturált, validálható, verziózott YAML sémává fordítható.
+Nem futtat compute workloadokat. Hordozható domain- és adapter-sémákat definiál.
+Implementációt a runtime repók (cic-relay és adapter implementációk) hordoznak.
 
 Részletes architektúra: `ai/SYSTEM_CONTEXT.md`
-Következő konkrét feladatok: `ai/PROMPTMAP.yaml`
-Tervezési döntések háttere: `ai/DECISIONS.md`
+Tervezési döntések: `ai/DECISIONS.md`
+Kötelező szabályok: `ai/MAINTENANCE_CONTRACT.md`
 
 ---
 
 ## Boot sequence — minden session elején
 
-Mielőtt szakmai kérdésre válaszolsz, végezd el ezt a sorrendet:
+1. `mcp__cic-graph__kb_status` — KB elérhető és friss?
+2. `ai/DECISIONS.md` — D-010/D-011 ismerete kötelező mielőtt bármit mondasz
+3. `ai/SYSTEM_CONTEXT.md` — teljes compute domain kontextus
+4. `ai/MAINTENANCE_CONTRACT.md` — mit szabad, mit nem
 
-1. `mcp__cic-graph__kb_status` — tudásbázis elérhető és friss?
-2. Olvasd el: `ai/SYSTEM_CONTEXT.md`
-3. Státusz térkép: mi **defined**, mi **draft**, mi **concept**
-4. Bridge térkép: hol nincs még séma-szintű megfelelő a fogalomnak
-
-Amíg ez a négy pont nincs meg, ne tegyél tényállításokat a primitive modell állapotáról.
+Amíg ez nincs meg, ne tegyél tényállításokat a compute séma állapotáról.
 
 ---
 
@@ -35,117 +31,59 @@ Amíg ez a négy pont nincs meg, ne tegyél tényállításokat a primitive mode
 | Státusz | Jelentés |
 |---|---|
 | **defined** | YAML séma létezik, `make validate` zöld |
-| **draft** | Design megvan írásban, séma még nincs |
-| **concept** | Megbeszélt, de formálisan még nincs rögzítve |
+| **draft** | Design megvan, séma még nincs |
+| **concept** | Megbeszélt, formálisan nem rögzítve |
 
-## Scaffold térkép (aktuális)
+---
+
+## Aktuális séma állapot
 
 | Elem | Státusz | Megjegyzés |
 |---|---|---|
-| git repo bootstrap | **defined** | `git merge base@0.5.0` kész |
-| `dependency.yaml` | **defined** | `base@0.5.0` composition lock |
-| `project.yaml` | **defined** | `x-cic.repo_type: primitive` |
-| `schemas/` struktúra | **defined** | atomic/ + aggregate/ + index.yaml |
-| aggregate skeletonök | **defined** | ConfigSurface, StateSurface, OperationSurface, ManagedEntity |
-| atomic layer (7 atom) | **defined** | Shape, Role, Behavior, Contract, Address, Identity, Event |
-| aggregate completion | **defined** | atomic ref-ek bekötve |
-| domain példa | **defined** | `schemas/examples/kubernetes-pod.yaml` |
-| `make validate` zöld | **defined** | Docker-alapú tooling, Vault nélkül is fut |
-| első signed release | **concept** | Vault + `make release VERSION=x` |
+| `compute-resource.yaml` | **defined** | unified, platform-agnosztikus |
+| `hypervisor-adapter.yaml` | **defined** | KVM/VMware/Proxmox contract |
+| `ipmi-adapter.yaml` | **defined** | IPMI/Redfish contract |
+| `cloud-provider-adapter.yaml` | **defined** | cloud provider contract (aws/gcp/azure/hcloud/do/ovh/oci) |
+| `policy_surface` bekötés | **defined** | state=adapter-only, config=owner |
+| Access atom integráció | **defined** | primitives v0.1.1-ből örökli |
 
 ---
 
-## A két szint
+## Kritikus döntések (röviden)
 
-```
-atomic primitive   = irreducibilis szemantikai atom
-                     Shape · Role · Behavior · Contract · Address · Identity · Event
-                   → ezekből schema fragment generálható
+**D-010 — unified ComputeResource**
+Nincs VM/Physical/Cloud szétválasztás. `instance_type` adapter-internal.
+Address: `{backend}/{provider}/{location}/{id}`
 
-aggregate primitive = szemantikai kompozíció sealed/defaulted/required slot-okkal
-                   → ezek adják a használható tervezési egységeket
-                   → aggregate-ből indulunk, nem atomból
-```
+**D-011 — power_state enum**
+`running/starting/stopping/stopped/paused/terminated/error/unknown`
+`paused` csak hypervisor_suspend capability adapterektől.
 
-Az objektum mindig következmény, soha nem kiindulópont.
+**Access atom (cic-primitives D-011)**
+`state_surface` modify: adapter-only — `config_surface` modify: owner.
 
 ---
 
-## A kompozíciós mechanizmus
-
-**Git remote = öröklődési lánc.** Nem YAML override rules.
+## Kompozíciós lánc
 
 ```
 base-repo (upstream sablon)
     │  remote: base → git merge base@0.5.0
-    └──► cic-primitives  (ez a repo)
-              │  remote: base → git merge base@0.5.0
-              └──► domain repók (cic-yang, cic-network, stb.)
+    └──► cic-primitives (primitives/@v0.1.1)
+              │  remote: base → git merge primitives/@v0.1.1
+              └──► cic-compute (ez a repo)
 ```
-
-A fájlstruktúra IS az interface contract. A merge konfliktus = séma sértés.
-
----
-
-## Bridge térkép — hol szakad meg a lánc
-
-```
-concept/Shape atom        ──?──  schemas/atomic/shape.yaml
-concept/ManagedEntity     ──?──  schemas/aggregate/managed-entity.yaml
-concept/git-composition   ──?──  git remote + base@0.5.0 merge
-design/project.yaml       ──?──  compiler tooling (repo_type döntés)
-```
-
-Ha egy kérdés ilyen pontra mutat: ne mondd, hogy "nincs" — mondd, hogy
-**"a fogalom documented, de a séma-szintű megfelelője még nem létezik"**.
-
----
-
-## Graph-first reasoning (MCP)
-
-MCP kérdéseknél ne `search_query → snippet → válasz` sorrendben dolgozz.
-
-Helyette:
-1. Fogalom azonosítás → induló node-ok (`search_nodes`, `find_nodes`)
-2. 1–2 hop szomszédok (`neighbors`, `guided_path`)
-3. Státusz ellenőrzés (defined/draft/concept)
-4. Bridge ellenőrzés (van-e séma-fájl megfelelő)
-5. Csak ebből válasz
-
----
-
-## Reasoning mód
-
-Válasz előtt azonosítsd:
-
-- **immersion**: fogalmak, relációk, a primitive modell logikájának befogadása — ne javasolj implementációt
-- **design**: séma struktúra, slot definíciók, kompozíciós szabályok tervezése
-- **implementation**: konkrét YAML, séma fájl, Makefile változás
-
-Immersion módban tilos hiányt feltételezni ott, ahol scaffold szándékos.
-
----
-
-## Kapcsolódó repók
-
-| Repo | Remote | Mit ad |
-|---|---|---|
-| `base-repo` | `base` | tooling, signing hook, CI, Makefile, mk/infra.mk |
-| `CIC-Schemas` | referencia | template-schema minta, séma pipeline, signing lánc |
-| `CIC-Relay` | — | a runtime ami a primitívekből épülő sémákat futtatja |
 
 ---
 
 ## Mérce
 
 ```bash
-make validate          # séma validáció — ha ez nem zöld, semmi sem kész
-make release VERSION=  # signed artifact
+make validate          # ha nem zöld, semmi sem kész
+make release VERSION=  # signed artifact (Vault szükséges)
 ```
 
-Lezárási kritérium minden primitive-re:
-1. Ebből hogyan lesz séma (YAML)?
-2. Ebből hogyan lesz API (RESTCONF / OpenAPI)?
-3. Ebből hogyan lesz runtime viselkedés?
-
-Ha mind a három megválaszolható → lezárt.
+Lezárási kritérium minden adapter contract-ra:
+1. Az address mező egyezik a compute-resource.yaml address kulcsával?
+2. Az observe output mezők mappolnak a state_surface-re?
+3. Az operations capability listája szinkronban van a binding_surface-szel?
