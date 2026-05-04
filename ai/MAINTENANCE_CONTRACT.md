@@ -1,6 +1,6 @@
 # AI Maintenance Contract
 
-A `cic-primitives` repo AI üzemeltetési kézikönyve.
+A `cic-compute` repo AI üzemeltetési kézikönyve.
 
 ---
 
@@ -8,20 +8,45 @@ A `cic-primitives` repo AI üzemeltetési kézikönyve.
 
 1. `mcp__cic-graph__kb_status` — KB friss és elérhető?
 2. `ai/SYSTEM_CONTEXT.md` — teljes architekturális kontextus
-3. `ai/PROMPTMAP.yaml` — mi a következő konkrét task?
-4. `ai/DECISIONS.md` — érintett döntések elolvasása
+3. `ai/DECISIONS.md` — D-010/D-011 döntések ismerete kötelező
+4. `ai/PROMPTMAP.yaml` — mi a következő konkrét task?
 
 Amíg ez a négy pont nincs meg, ne tégy tényállításokat a repo állapotáról.
 
 ---
 
+## Kritikus tudás erre a repóra
+
+**D-010 — ComputeResource unified schema**
+Nincs `VirtualMachine`, `PhysicalMachine`, `CloudInstance` — ezek törölve.
+Egyetlen séma: `schemas/domain/compute-resource.yaml`.
+Az `instance_type` eltávolítva — adapter-internal lookup tábla, nem schema concern.
+
+**D-011 — power_state enum**
+`running / starting / stopping / stopped / paused / terminated / error / unknown`
+`starting`/`stopping` valós tranziens mindhárom platformon — nem csak cloud API artifakt.
+`paused` csak `hypervisor_suspend` capability-vel rendelkező adapter állítja be.
+
+**Address réteg**
+`{backend}/{provider}/{location}/{id}` — provider az address kulcsa, nem config mező.
+cloud: `[aws, gcp, azure, hcloud, do, ovh, oci]` enum
+vm: hypervisor-id (pl. proxmox-01)
+physical: datacenter-id (pl. dc-ams-01)
+
+**Access atom (cic-primitives D-011)**
+A primitives repóból örökli a PolicySurface aggregate-et.
+`compute-resource.yaml` tartalmaz `policy_surface` blokkot default szabályokkal:
+- `state_surface` modify: adapter-only
+- `config_surface` modify: owner
+
+---
+
 ## Mit módosíthatsz önállóan
 
-- `schemas/atomic/*.yaml` — ha `make validate` zöld marad
-- `schemas/aggregate/*.yaml` — ha `make validate` zöld marad
-- `schemas/examples/*.yaml` — valid domain példák hozzáadása
-- `ai/PROMPTMAP.yaml` — task státusz frissítés (pending → done)
-- `ai/SYSTEM_CONTEXT.md` — állapot szinkronizáció elvégzett Phase után
+- `schemas/domain/compute-resource.yaml` — ha `make validate` zöld marad
+- `schemas/adapters/*.yaml` — adapter contract frissítés
+- `ai/DECISIONS.md` — új döntés dokumentálása
+- `ai/PROMPTMAP.yaml` — task státusz frissítés
 
 ---
 
@@ -29,28 +54,23 @@ Amíg ez a négy pont nincs meg, ne tégy tényállításokat a repo állapotár
 
 | Terület | Miért tiltott |
 |---|---|
-| `schemas/index.yaml` spec struktúrája | meta-schema contract — törhet minden validáció |
-| Bármely slot `mode:` értéke aggregate-ben | downstream repókat töri (D-005) |
-| `tools/compiler.py` validációs logika | D-008 — design döntés kell hozzá |
-| `dependency.yaml` tartalma | D-007 — csak pinnelt tag, branch tiltott |
-| `.github/workflows/` | base-repo-ból érkezett, ne módosítsd |
-| `ai/DECISIONS.md` meglévő döntései | döntési history — törölni/felülírni tilos |
+| `schemas/domain/compute-resource.yaml` capability lista | adapter contractokkal szinkronban kell lennie |
+| `cloud_provider` enum értékei | implementált halmazt tükrözi — csak valódi implementációval bővíthető |
+| Address key mezők (backend/provider/location/id) | routing contract — YANG key, RESTCONF path, runtime mind függ tőle |
+| `power_state` enum értékei | D-011 döntés — minden platformon egységes, nem bővíthető egyeztetes nélkül |
+| `tools/compiler.py` validációs logika | design döntés kell hozzá |
+| `dependency.yaml` tartalma | csak pinnelt tag, branch tiltott |
 
 ---
 
-## Mikor kell `ai/DECISIONS.md`-be bejegyzés
+## Mikor kell döntés dokumentálása
 
-- Slot `mode:` megváltoztatása (sealed/defaulted/required)
-- Új aggregate primitive bevezetése
-- Kompozíciós mechanizmus érintése (D-001)
-- `compiler.py` validációs logikájának változtatása (D-008)
-- Bármely `TBD` típus véglegesítése
-
-## Mikor elég csak `PROMPTMAP.yaml`-t frissíteni
-
-- Task státusz frissítés (pending → in_progress → done)
-- Új task hozzáadása meglévő milestone alá
-- Accept criteria pontosítása
+- Új capability bevezetése vagy meglévő törlése
+- Address réteg változtatása
+- `power_state` enum bővítése
+- Új adapter contract hozzáadása
+- `cloud_provider` enum bővítése
+- PolicySurface szabályok változtatása
 
 ---
 
@@ -66,48 +86,20 @@ Ha nem zöld: ne commitolj. Nincs kivétel.
 
 ## Státusz szemantika
 
-| Státusz | Jelentés | Bizonyíték |
-|---|---|---|
-| `defined` | YAML séma létezik, `make validate` zöld | fájl + zöld CI |
-| `draft` | Design megvan írásban, séma még nincs | DECISIONS.md bejegyzés |
-| `concept` | Megbeszélt, formálisan nem rögzítve | megbeszélés / thread |
-
-Ha nem tudod fájl-szinten alátámasztani: ne mondd `defined`-nak.
+| Státusz | Jelentés |
+|---|---|
+| `defined` | YAML séma létezik, `make validate` zöld |
+| `draft` | Design megvan, séma még nincs |
+| `concept` | Megbeszélt, formálisan nem rögzítve |
 
 ---
 
-## A leggyakoribb hibák
+## A leggyakoribb hibák ezen a repón
 
-| Hiba | Következmény | Megelőzés |
-|---|---|---|
-| Sealed slot felülírása DomainComposition-ben | compiler.py elkapja, de séma inkonzisztens | D-005 olvasása |
-| `make validate` nélküli commit | rejtett séma törés | hook + fegyelem |
-| Új fogalom bevezetése meglévő helyett | fragmentált modell | D-003: 7 atom végleges |
-| Domain objektumból kiindulás (Pod, Switch) | aggregate helyett instance-t tervezel | D-002 |
-| `TBD` típus döntés nélküli kitöltése | D-008 merge stratégia nyitott | megkérdezni |
-
----
-
-## Design-change workflow
-
-1. Azonosítsd az érintett döntést (`ai/DECISIONS.md`)
-2. Fogalmazd meg mi változna és mi törne
-3. Kérj megerősítést — ne lépj tovább nélküle
-4. Módosítsd a sémát
-5. `make validate` — zöld?
-6. PROMPTMAP task → done
-7. `ai/DECISIONS.md` frissítés ha új döntés született
-
----
-
-## Érvényes / érvénytelen példák
-
-Referenciaként, nem validálandó fájlok:
-
-```
-schemas/examples/          valid domain kompozíciók (make validate ellenőrzi)
-schemas/examples/invalid/  szándékosan érvénytelen fájlok — counterexample-ök
-```
-
-Az `invalid/` könyvtár fájljait a compiler kizárja a validációból.
-Minden invalid fájl tartalmaz `why_invalid:` magyarázatot.
+| Hiba | Következmény |
+|---|---|
+| `instance_type` visszavezetése | vendor lock-in, D-010 sértése |
+| `cloud_provider` config_surface-be helyezése | address réteg törése |
+| Platform-specifikus séma létrehozása | D-010 unified model sértése |
+| `paused` cloud adapternél | D-011 sértése — csak hypervisor_suspend |
+| adapter contract és compute-resource.yaml szinkronon kívül | inkonzisztens capability lista |
