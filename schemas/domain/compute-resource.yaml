@@ -142,6 +142,7 @@ spec:
           Aktuális energiaállapot — adapter normalizálja a platform értékeket.
           starting/stopping: tranziens állapot (boot folyamat, graceful shutdown, fizikai kivitel alatt).
           terminated: törlés/decommission folyamatban — objektum még létezik, adapter törli ha kész.
+          paused: csak hypervisor képesség (capability: hypervisor_suspend).
         contract:
           - type: enum
             expression: [running, starting, stopping, stopped, paused, terminated, error, unknown]
@@ -473,9 +474,9 @@ spec:
             type: string
             description: >
               Hol fut az erőforrás.
-              cloud: provider region (pl. eu-central-1, europe-west1)
-              vm: "-" (hypervisor kezeli)
-              physical: "-" (datacenter kezeli)
+              cloud: provider region (pl. eu-central-1, europe-west1) — kötelező
+              vm: cluster/pool azonosítója vagy "-" ha a hypervisor kezeli
+              physical: rack/zone azonosítója vagy "-" ha a datacenter kezeli
           - name: id
             type: string
     adapter: compute-adapter

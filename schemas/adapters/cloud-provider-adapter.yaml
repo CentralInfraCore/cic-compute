@@ -3,7 +3,7 @@ metadata:
   name: cloud-provider-adapter
   version: v0.0.dev
   description: >
-    Cloud provider adapter interface contract — CloudInstance DomainComposition runtime kötése.
+    Cloud provider adapter interface contract — ComputeResource (backend: cloud) runtime kötése.
     Bármely cloud provider implementálhatja. Ez NEM implementáció — ez az interface
     amit minden cloud provider adapternek teljesítenie kell.
   owner: Gabor Zoltan Sinko
@@ -17,21 +17,28 @@ metadata:
 
 spec:
   kind: AdapterContract
-  domain: "cic:compute:CloudInstance"
+  domain: "cic:compute:ComputeResource"
+  backend: cloud
   protocol: "cloud-provider-api"
 
   address:
-    description: Háromrészes instance azonosítás.
+    description: >
+      Négykomponensű azonosítás — megfelel a ComputeResource address kulcsának:
+      {backend}/{provider}/{location}/{id}
     fields:
+      - name: backend
+        type: string
+        value: cloud
+        description: Mindig "cloud" ennél az adapternél
       - name: provider
         type: enum
         mandatory: true
         values: [aws, gcp, azure, hcloud, do, ovh]
-        description: Cloud provider azonosítója
-      - name: region
+        description: Cloud provider azonosítója — routing kulcs
+      - name: location
         type: string
         mandatory: true
-        description: Provider-specifikus régió azonosító
+        description: Provider-specifikus régió (pl. eu-central-1, europe-west1, westeurope)
       - name: id
         type: string
         mandatory: true
@@ -40,28 +47,35 @@ spec:
   operations:
 
     observe:
-      description: Instance aktuális állapotának lekérdezése → state_surface
+      description: Instance aktuális állapotának lekérdezése → state_surface normalizálva
       input: address
       output:
         - name: power_state
           type: string
           mandatory: true
           maps_to: state_surface.power_state
+          note: >
+            Az adapter normalizálja a provider-specifikus értékeket:
+            pending → starting, shutting-down → stopping, terminated → terminated
           contract:
             - type: enum
-              expression: [running, stopped, terminated, pending, unknown]
+              expression: [running, starting, stopping, stopped, paused, terminated, error, unknown]
+        - name: ip_addresses
+          type: list
+          optional: true
+          maps_to: state_surface.ip_addresses
+          item_fields:
+            - name: interface
+              type: string
+            - name: address
+              type: string
+            - name: family
+              type: enum
+              values: [ipv4, ipv6]
         - name: provider_id
           type: string
           mandatory: true
           maps_to: state_surface.provider_id
-        - name: public_ip
-          type: string
-          optional: true
-          maps_to: state_surface.public_ip
-        - name: private_ip
-          type: string
-          optional: true
-          maps_to: state_surface.private_ip
         - name: spot_interrupted
           type: boolean
           optional: true
@@ -94,8 +108,18 @@ spec:
       precondition: power_state == running
       postcondition: power_state == stopped
 
+    restart:
+      description: Instance újraindítása
+      idempotent: false
+      input:
+        - name: force
+          type: boolean
+          default: false
+      precondition: power_state == running
+      postcondition: power_state == running
+
     terminate:
-      description: Instance végleges törlése — IRREVERSIBLE
+      description: Instance végleges törlése — IRREVERSIBLE, MANUAL ONLY
       idempotent: false
       input:
         - name: confirm
@@ -106,22 +130,39 @@ spec:
       note: >
         Nem hívható automatikus reconcile loop-ból.
         Kizárólag explicit operátori megerősítéssel (confirm: true).
+        Az objektum terminated állapotban marad amíg az adapter teljesen eltávolítja.
 
     resize:
-      description: Instance type módosítása
+      description: >
+        Erőforrás módosítása cpu_cores/memory_mb/disk_gb alapján.
+        Az adapter dönti el a fordítási stratégiát:
+          OCI Flex shapes: direkt cpu/memory spec átadása
+          AWS/GCP/Azure fixed shapes: legközelebbi instance_type keresés a lookup táblából
       idempotent: false
       input:
-        - name: instance_type
-          type: string
-          mandatory: true
+        - name: cpu_cores
+          type: integer
+          optional: true
+        - name: memory_mb
+          type: integer
+          optional: true
+        - name: disk_gb
+          type: integer
+          optional: true
       output:
         - name: job_id
           type: string
       precondition: power_state == stopped
+      note: Legalább egy input mező kötelező.
 
   known_implementations:
     - name: aws-ec2-adapter
+      provider: aws
     - name: gcp-compute-adapter
+      provider: gcp
     - name: azure-compute-adapter
+      provider: azure
     - name: hcloud-adapter
+      provider: hcloud
     - name: oci-compute-adapter
+      provider: ovh
