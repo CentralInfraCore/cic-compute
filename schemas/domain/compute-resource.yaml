@@ -390,7 +390,7 @@ spec:
         type: operation
         idempotent: false
         capability: cloud
-        description: Instance végleges törlése — MANUAL ONLY (confirm: mandatory)
+        description: "Instance végleges törlése — MANUAL ONLY (confirm: mandatory)"
         input:
           - name: confirm
             shape_type: scalar
