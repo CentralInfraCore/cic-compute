@@ -20,6 +20,18 @@ spec:
     aggregate: ManagedEntity
     ref: schemas/aggregate/managed-entity.yaml
 
+  # ── PolicySurface — Access atom alapú jogosultság (cic-primitives D-011) ────
+  policy_surface:
+    default_access: open
+    default_modify: owner
+    surface_rules:
+      - surface: state_surface
+        modify: [OU=adapters,O=cic]
+      - surface: config_surface
+        access: [O=owner]
+        modify: [O=owner]
+    inherit_policy: true
+
   # ── Identity ────────────────────────────────────────────────────────────────
   identity:
     atomic_ref: schemas/atomic/identity.yaml
@@ -95,6 +107,16 @@ spec:
             scalar_type: string
             optional: true
 
+      # capability: cloud — csak cloud backenden értelmezett
+      - name: availability_zone
+        atomic_ref: schemas/atomic/shape.yaml
+        shape_type: scalar
+        scalar_type: string
+        role: config
+        optional: true
+        capability: cloud
+        description: Availability zone a régión belül (pl. eu-central-1a, europe-west1-b)
+
       # capability: spot — csak ha az adapter támogatja
       - name: spot
         atomic_ref: schemas/atomic/shape.yaml
@@ -142,10 +164,13 @@ spec:
           Aktuális energiaállapot — adapter normalizálja a platform értékeket.
           starting/stopping: tranziens állapot (boot folyamat, graceful shutdown, fizikai kivitel alatt).
           terminated: törlés/decommission folyamatban — objektum még létezik, adapter törli ha kész.
-          paused: csak hypervisor képesség (capability: hypervisor_suspend).
+          paused: csak hypervisor adapter állítja be (capability: hypervisor_suspend).
+                  Cloud és physical adapter soha nem ad vissza paused értéket.
         contract:
           - type: enum
             expression: [running, starting, stopping, stopped, paused, terminated, error, unknown]
+        capability_values:
+          paused: hypervisor_suspend
 
       - name: ip_addresses
         atomic_ref: schemas/atomic/shape.yaml
