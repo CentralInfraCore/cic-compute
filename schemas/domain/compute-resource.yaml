@@ -528,6 +528,7 @@ spec:
 derivation_chain:
 
   yang:
+    status: specification-only
     module: cic-compute
     namespace: "urn:cic:compute"
     content: |
