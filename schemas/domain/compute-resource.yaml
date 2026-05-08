@@ -102,6 +102,8 @@ spec:
           - name: network
             shape_type: scalar
             scalar_type: string
+            semantic_type: cic-reference
+            reference_target: "cic:network:NetworkInterface"
           - name: mac_address
             shape_type: scalar
             scalar_type: string
