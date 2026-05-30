@@ -62,6 +62,18 @@ spec:
   # ── Conditional rules by kind ─────────────────────────────────────────────────
   allOf:
 
+    # AtomicPrimitive must have at least one content property beyond kind
+    - if:
+        properties:
+          spec:
+            properties:
+              kind:
+                const: AtomicPrimitive
+      then:
+        properties:
+          spec:
+            minProperties: 2
+
     # AggregatePrimitive must have slots, each slot must have a mode
     - if:
         properties:
@@ -85,7 +97,7 @@ spec:
                       type: string
                       enum: [sealed, defaulted, required]
 
-    # DomainComposition must have base.aggregate
+    # DomainComposition must have base.aggregate and base.ref
     - if:
         properties:
           spec:
@@ -99,9 +111,11 @@ spec:
             properties:
               base:
                 type: object
-                required: [aggregate]
+                required: [aggregate, ref]
                 properties:
                   aggregate:
+                    type: string
+                  ref:
                     type: string
 
     # AdapterContract must have domain, protocol, operations
