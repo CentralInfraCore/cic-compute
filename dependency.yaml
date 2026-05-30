@@ -1,4 +1,4 @@
-schema_version: "1"
+schema_version: '1'
 dependencies:
   - name: base-repo
     source: github.com/CentralInfraCore/base-repo
@@ -26,10 +26,9 @@ dependencies:
       - LICENSE.meta.yaml
       - README.md
       - feature-list.md
-
   - name: cic-primitives
     source: github.com/CentralInfraCore/cic-primitives
-    tag: primitives/@v0.1.1
+    tag: primitives/@v0.1.5
     mode: remote-merge
     purpose: primitive-schema-base
     imported_paths:
