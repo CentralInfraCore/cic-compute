@@ -25,11 +25,12 @@ x-cic:
   base_primitive: cic-primitives@v0.1.0
   known_limitations:
     - id: build_hash_equals_source_hash
-      description: >
-        build_hash == source_hash — no separate build step yet.
-        Will diverge when pyang compile or code generation is introduced.
+      description: 'build_hash == source_hash — no separate build step yet. Will diverge
+        when pyang compile or code generation is introduced.
+
+        '
 release:
-  version: 0.2.1
+  version: 0.2.2
   timestamp: '2026-05-04T12:44:28.975414+00:00'
   repository_tree_hash: V/XFOHqmVnt2xcIVOellTwkgzLBruUtr5Eq04cRRwYU=
   build_hash: emuArC22lPkqG4KRdGD1eFS4EaxJY1O1M/angGji0eU=
