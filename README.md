@@ -150,3 +150,29 @@ make release     # signed artifact (Vault required)
 | `base-repo` | upstream tooling (Makefile, CI, compiler) — `git merge base@0.5.0` |
 | `CIC-Relay` | runtime — executes schemas built from primitives |
 | domain repos | derived repos — `cic-primitives` is their base |
+
+---
+
+## Release artifact — GHCR
+
+The schema release is available as an OCI artifact in GitHub Container Registry.
+
+**With ORAS:**
+
+```bash
+oras pull ghcr.io/centralinfracore/schema/cic-compute:v0.2.3-src2026
+```
+
+**With curl (no ORAS required):**
+
+```bash
+REPO="centralinfracore/schema/cic-compute"; TAG="v0.2.3-src2026"; \
+TOKEN=$(curl -fsSL "https://ghcr.io/token?scope=repository:${REPO}:pull" | jq -r .token); \
+DIGEST=$(curl -fsSL \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Accept: application/vnd.oci.image.manifest.v1+json" \
+  "https://ghcr.io/v2/${REPO}/manifests/${TAG}" | jq -r '.layers[0].digest'); \
+curl -fL -H "Authorization: Bearer ${TOKEN}" \
+  "https://ghcr.io/v2/${REPO}/blobs/${DIGEST}" \
+  -o cic-compute-v0.2.3.yaml
+```
